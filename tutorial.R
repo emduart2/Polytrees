@@ -42,29 +42,55 @@ intervExps[[2]] # List of coefficient matrices from which the sample correlation
 # were sampled. In particular these matrices have equal entries except for the entries
 # of the edges that point to a node that is an intervention target.
 
+# Example: See the results of the learning algorithm using different
+# sample sizes in a single DAG
+el<-matrix(c(1,3,2,3,3,4,4,5),nc=2,byrow = TRUE)
+g<-graph_from_edgelist(el,directed = TRUE)
+plot(g)
+L<-coeffLambda(g)
+result<-testLearning(1,g,L,list(c(3),c(4),c(5)))
+colnames(result)<-c("id","n","p","Robsv", "Rmedian","Rmean")
+result
 # Example: Test the learning algorithm on the different correlation matrices
-# Robs, Rmean, Rmeadian
-el<-matrix(c(1,2,2,6,3,2,3,5,5,7,7,8,4,5),nc=2,byrow = TRUE)
+# Robs, Rmean, Rmedian
+# We fix a DAG, sample from its structural equations with two interventions
+# 100 times and record the number of edges that the chow Liu got wrong
+# 04.03.2022
+el<-matrix(c(1,2,2,6,2,3,3,5,5,7,7,8,4,5),nc=2,byrow = TRUE)
 gtrue<-graph_from_edgelist(el,directed = TRUE)
+L<-coeffLambda(gtrue)
+L
 plot(gtrue)
 results<-c()
-for (i in (1:100)){
-  result<-testLearning(i,gtrue,list(c(2),c(4)))
+for (i in (1:1000)){
+  result<-testLearning(i,gtrue,L,list(c(2),c(4),c(6)))
   results<-rbind(results,result)
 }
 colnames(results)<-c("id","n","p","Robsv", "Rmedian","Rmean")
-summary(results)
-results[,50,]
-rest50<- data.frame(results) %>% filter(n==50)
-rest100<- data.frame(results) %>% filter(n==100)
-rest500<- data.frame(results) %>% filter(n==500)
-rest1000<-data.frame(results) %>% filter(n==1000)
-summary(rest50)
-summary(rest100)
-summary(rest500)
-summary(rest1000)
 x<-data.frame(results)
-par(mfrow=c(2,2))
-plot(x$n,x$Robsv)
-plot(x$n,x$Rmedian)
-plot(x$n,x$Rmean)
+par(mfrow=c(1,1))
+boxplot(x$Robsv~x$n,
+        data=x,
+        main="ChowLiu Robsv",
+        xlab="Sample Size",
+        ylab="Number of Wrong Edges",
+        col="orange",
+        border="brown"
+)
+boxplot(x$Rmedian~x$n,
+        data=x,
+        main="ChowLiu Rmedian",
+        xlab="Sample Size",
+        ylab="Number of Wrong Edges",
+        col="orange",
+        border="brown"
+)
+boxplot(x$Rmean~x$n,
+        data=x,
+        main="ChowLiu Rmean",
+        xlab="Sample Size",
+        ylab="Number of Wrong Edges",
+        col="orange",
+        border="brown"
+)
+

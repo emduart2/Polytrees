@@ -91,3 +91,65 @@ length(as_edgelist(dif))
 ?difference
 c<-chow.liu(data.frame(X))
 plot(c)
+#-----
+plot(g1)
+?randomDAG
+admat<-randomDAG(4,0.5,c(1:4))
+g<-graph_from_adjacency_matrix(admat)
+plot(g)
+typeof(sample(p,p))
+c(1,2,3)
+#-------
+mydf<-data.frame(results)
+names(mydf)<-c("id","n","p","Robsv", "Rmedian","Rmean")
+mydf
+
+
+names(mydf)
+
+mydf %>%
+  ggplot(aes(x=n, y=Rmedian))+
+  geom_point()
+mydf
+ggplot(mydf,mapping = aes(x=n))+
+  geom_histogram(bins=3)
+
+df <- gather(mydf, event, total, Rmedian:Rmean)
+df
+plot <- ggplot(df, aes(n, total, fill=event))
+plot <- plot + geom_bar(stat = "identity", position = 'dodge')
+plot
+
+
+gl<-testLearning(1,g,list(c(3)))
+gl
+plot(gl)
+plot(g)
+
+list(diag(c(1,1,1)),diag(c(2,3,4)),diag(c(1,1,1)))
+intervExps[[1]]
+threewayT <- do.call(abind, c(list(diag(c(1,1,-1)),diag(c(2,3,4)),diag(c(-1,1,1))), list(along=3)))
+Rmedian<-apply(threewayT,1:2,median)
+Rmean<-apply(threewayT,1:2,prod)
+
+Rmedian
+Rmean
+prod(c(1,2))
+?prod
+Rmean<-hadamard.prod( intervExps[[1]][[1]],intervExps[[1]][[2]])
+gc<-chowLiu(Rmean)
+gm<-chowLiu(Rmedian)
+plot(gm)
+gc<-chowLiu(intervExps[[1]][[2]])
+gc<-chowLiu(intervExps[[1]][[3]])
+plot(gc)
+dif1<-gu%m%gc
+dif2<-gc%m%gu
+plot(dif1)
+plot(dif2)
+# Example
+el<-matrix(c(1,3,2,3,3,4,4,5,4,6),nc=2,byrow = TRUE)
+g<-graph_from_edgelist(el,directed = TRUE)
+gu<-graph_from_edgelist(el,directed = FALSE)
+plot(g)
+plot(chowLiu(interventionalData(1000,g,0)))
