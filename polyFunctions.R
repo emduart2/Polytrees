@@ -19,6 +19,8 @@
 # install.packages("graph")
 # install.packages("abind")
 # install.packages("SID")
+# install.packages("rmarkdown")
+#install.packages('spatstat')
 library(BNSL)
 library(bnlearn)
 library(igraph)
@@ -29,6 +31,8 @@ library(abind)
 library(SID)
 library(tidyverse)  
 library(ggplot2)
+library(rmarkdown)
+library(spatstat)
 #-------------------------
 
 # Function for calculating sample covariance matrix
@@ -62,7 +66,7 @@ sample.cor <- function(X, Y=NULL){ # Calculate sample correlation matrix
   }
   return(corhat)
 }
-#-----------------------------------------------------------
+ #-----------------------------------------------------------
 # Example.
 X<-cbind(rnorm(100),rnorm(100),rnorm(100))
 sample.cor(X)
@@ -138,47 +142,144 @@ plot(g1)
 # is used as the weight matrix to perform the maximum weight
 # spanning tree calculation.
 #-------------------------------------------------------------
-
-#-- This function takes a sample size, a dag G and a list
-# of intervention targets and returns a list,
-# The first entry of the list is a list of correlation matrices
-# obtained from the interventional experiments.
-# The second entry of the list, is a list of the coefficient matrices
-# of the intervention, this is to check which coefficients are being used
-# to run the sampling from the DAG.
-interventionalData<-function(n,G,L,interventionTargets){
+#-- interventionalData ---- #
+#-- This function takes a dag G and a list
+#INPUT: G = Dag 
+#       L = coefficient matrix 
+#       interventionTargets= list of intervention Targets, the 
+#                            first entry of this list is the sample size
+#                            of the observational setting
+#OUTPUT: A list with three sublist,
+#       List1= This is a list of correlation matrices
+#              obtained from the interventional experiments.
+#       List2= This is a list of coefficient matrices with the values
+#              of the intervened coeffocients
+#       List3= This is a list of the sample size of each intervention
+# 
+interventionalData<-function(G,L,interventionTargets){
   p<-nrow(L)
+  n<-interventionTargets[[1]]
+  nList<-c(n)
+  interventionTargets<-interventionTargets[-1]
   X<-samplingDAG(n,L)
   Rlist<-list(sample.cor(X)) # Initialize with an observational correlation matrix
   Llist<-list(L)
   for(I in interventionTargets){
+    nI<-I[1] # first element is the sample size
+    tI<-I[-1] # remaining elements are the intervention targets
     LI<-matrix(0,p,p)
     LI<-L
     if (length(I)>0){
-    for (j in (1:length(I))) {
-      parentsj<-neighbors(G,I[j],mode = "in")
+    for (j in (1:length(tI))) {
+      parentsj<-neighbors(G,tI[j],mode = "in")
       if (length(parentsj)>0){
       for (k in parentsj){
-        LI[k,I[j]]<-runif(1,-1,1)
+        LI[k,tI[j]]<-runif(1,-1,1)
       }
       }
     }
     }
-    XI<-samplingDAG(n,LI)
+    XI<-samplingDAG(nI,LI)
     RI<-list(sample.cor(XI))
     Rlist<-append(Rlist,RI)
     Llist<-append(Llist,list(LI))
+    nList<-append(nList,nI)
   }
-  return(list(Rlist,Llist))
+  RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList)
+  return(RLlist)
 }
 # Example
 el<-matrix(c(1,3,2,3,3,4,4,5),nc=2,byrow = TRUE)
 g<-graph_from_edgelist(el,directed = TRUE)
 plot(g)
 L<-coeffLambda(g)
-intervExps<-interventionalData(500,g,L,list(c(2),c(3)))
-intervExps[[1]][1]
-#---
+intervExps<-interventionalData(g,L,list(100,c(100,2),c(300,2,3)))
+intervExps$Rs # list of sample correlations
+intervExps$Ls # list of actual intervened coefficients
+intervExps$Ns # list of sample sizes
+sum(intervExps$Ns)
+
+#-wmedianCorrels
+# INPUT: corrsIs = Ordered List of observed correlation matrices
+#                 associated to the interventional experiments
+#        nIs = Ordeded List of sample sizes associated to each
+#              interventional experiment.
+# OUTPUT: A list consisting of:
+#       Rmedian = a matrix, each entry is the weighted median
+#       probs = normalized vector of weights for each interventional setting.
+#               
+# Consolidate function
+# The function computes the entrywise weighted median of the correlation 
+# entries. The function weighted.median takes a vector of values
+# and a vector of weights of the same length.
+wmedianCorrels<-function(corrIs,nIs){
+  p<-nrow(corrIs[[1]])
+  k<-length(nIs)
+  probs<- 1/sum(nIs)*nIs
+  threewayT<-array(unlist(corrIs),c(p,p,k))
+  Rmedian<-apply(threewayT,1:2,weighted.median,probs)
+  return(list(Rmedian=Rmedian,probs=probs))
+}
+
+## Tests for the median correlation matrix with three matrices
+
+m1<-matrix(c(1,1,0,1),nrow=2, byrow = TRUE)
+m2<-matrix(c(1,1,0.2,1),nrow = 2, byrow = TRUE)
+m3<-matrix(c(1.5,1,0.5,1),nrow = 2, byrow = TRUE)
+wmedianCorrels(list(m1,m2,m3),c(50,50,50))
+wmeanCorrels(list(m1,m2,m3),c(50,50,10))
+## Tests for the median correlation matrix with 
+# intrventional experiments.
+
+el<-matrix(c(1,3,2,3,3,4,4,5),nc=2,byrow = TRUE)
+g<-graph_from_edgelist(el,directed = TRUE)
+plot(g)
+L<-coeffLambda(g)
+intervExps<-interventionalData(g,L,list(100,c(100,2),c(300,2,3)))
+intervExps$Rs # list of sample correlations
+intervExps$Ls # list of actual intervened coefficients
+intervExps$Ns # list of sample sizes
+wmedianCorrels(intervExps$Rs,intervExps$Ns)
+##-------------------------------------------
+
+#---- Weighted Mean correlation matrix
+#----
+#-wmedianCorrels
+# INPUT: corrsIs = Ordered List of observed correlation matrices
+#                 associated to the interventional experiments
+#        nIs = Ordeded List of sample sizes associated to each
+#              interventional experiment.
+# OUTPUT: A list consisting of:
+#       Rmean = a matrix, each entry is the weighted median
+#       probs = normalized vector of weights for each interventional setting.
+#               
+# Consolidate function
+# The function computes the entrywise weighted median of the correlation 
+# entries. The function weighted.median takes a vector of values
+# and a vector of weights of the same length.
+wmeanCorrels<-function(corrIs,nIs){
+  p<-nrow(corrIs[[1]])
+  k<-length(nIs)
+  probs<- 1/sum(nIs)*nIs
+  threewayT<-abs(array(unlist(corrIs),c(p,p,k)))
+  Rmean<-apply(threewayT,1:2,weighted.mean,probs)
+  return(list(Rmean=Rmean,probs=probs))
+}
+
+# Tests with wmeanCorrels
+M1<-wmeanCorrels(intervExps$Rs,intervExps$Ns)
+M2<-wmedianCorrels(intervExps$Rs,intervExps$Ns)
+M1$Rmean
+M2$Rmedian
+
+p<-nrow(intervExps$Rs[[1]])
+k<-length(intervExps$Ns)
+thway<-array(unlist(intervExps$Rs),c(p,p,k))
+thway[1,2,]
+intervExps$Rs
+thway[,1,]
+
+#-----
 # This function takes and id=identifier, a graph G and a
 # set of intervention targets. 
 # for each of the sample sizes 50,100,500,1000,500
@@ -198,8 +299,8 @@ testLearning<-function(id,G,L,II){
    Rmedian<-apply(threewayT,1:2,median)
    Rmean<-apply(threewayT,1:2,prod)
    Gobsv<-chowLiu(intervExps[[1]][[1]])  # Learn a skeleton from an obsv correlation,
-   Gmedian<-chowLiu(Rmedian)           # median correlation
-   Gmean<-chowLiu(Rmean)               # mean correlation
+   Gmedian<-chowLiu(Rmedian)           # Learn skeleton from median correlation
+   Gmean<-chowLiu(Rmean)               # Learn skeleton from mean correlation
    Gu<-graph_from_edgelist(as_edgelist(G),directed = FALSE)
    dif1<-Gu%m%Gmedian
    dif2<-Gmedian%m%Gu
@@ -209,14 +310,15 @@ testLearning<-function(id,G,L,II){
    difMean<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))
    dif1<-Gu%m%Gobsv
    dif2<-Gobsv%m%Gu
-   difObsv<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))
+   difObsv<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))/ (p-1)
    results<-rbind(results,c(id,n,p,difObsv,difMedian,difMean))
   }
   return(results)
 }
+#------------------
 
 
-#-----
+#--------------------
 #--- Data set of polytrees
 el1<-matrix(c(1,2,2,3),nc=2,byrow = TRUE)
 g1<-graph_from_edgelist(el1,directed = TRUE)
@@ -226,7 +328,7 @@ el3<-matrix(c(1,3,2,3,3,4),nc=2,byrow = TRUE)
 g3<-graph_from_edgelist(el3,directed = TRUE)
 el4<-matrix(c(1,4,2,4,3,4),nc=2,byrow = TRUE)
 g4<-graph_from_edgelist(el4,directed = TRUE)
-el5<-matrix(c(1,2,2,3,3,4,4,5),nc=2,byrow = TRUE)
+el5<-matrix(c(1,2,2,3,3,4,4,5),nc=2,byrow = TRUE) 
 g5<-graph_from_edgelist(el5,directed = TRUE)
 el6<-matrix(c(1,5,2,3,3,4,3,5),nc=2,byrow = TRUE)
 g6<-graph_from_edgelist(el6,directed = TRUE)
@@ -235,6 +337,9 @@ g7<-graph_from_edgelist(el7,directed = TRUE)
 el8<-matrix(c(1,2,2,3,3,4,4,5,5,6),nc=2,byrow = TRUE)
 g8<-graph_from_edgelist(el8,directed = TRUE)
 polytreeList<-list(g1,g2,g3,g4,g5,g6,g7,g8)
+
+#---
+# List of random polytrees on fixed number of nodes
 
 #--- Data set of polytrees
 results<-c()

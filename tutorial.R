@@ -57,6 +57,7 @@ result
 # 100 times and record the number of edges that the chow Liu got wrong
 # 04.03.2022
 el<-matrix(c(1,2,2,6,2,3,3,5,5,7,7,8,4,5),nc=2,byrow = TRUE)
+el
 gtrue<-graph_from_edgelist(el,directed = TRUE)
 L<-coeffLambda(gtrue)
 L
@@ -94,3 +95,31 @@ boxplot(x$Rmean~x$n,
         border="brown"
 )
 
+#--- Trying Daniele's code
+
+G<-pruferwithskeleton(3)
+G$Directed
+G$Skeleton
+gdag<-graph_from_adjacency_matrix(G$Directed, mode = "directed")
+plot(gdag)
+#---------------------------------------------------------------
+# E = list of edges
+E= matrix(c(1,2),nc=2,byrow=TRUE)
+# S =
+S=matrix(c(1,0.3,0.3,1),nc=2, byrow = TRUE)
+thres=0.01
+triplets(E,S,thres)
+
+# Structural Hamming distance example
+g1 <- randomDAG(10, prob = 0.2)
+g2 <- randomDAG(10, prob = 0.2)
+shd(G1,G2)
+plot(G2)
+G1<-graph_from_adjacency_matrix(g1,mode="directed")
+G2<-graph_from_adjacency_matrix(g2,mode="directed")
+#--- Checking out Daniele's code
+E<- matrix(c(1,2,2,3,3,4), ncol = 2, byrow=TRUE)
+it<-list(list(1),list(2),list(3,4))
+envs<-I_env(E,it)
+envs$Env_matrix
+envs$Env_list
