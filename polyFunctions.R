@@ -116,7 +116,11 @@ el<-matrix(c(1,2,2,3,3,4),nc=2,byrow = TRUE)
 g<-graph_from_edgelist(el,directed = TRUE)
 plot(g)
 L<-coeffLambda(g)
-X<-samplingDAG(100,L) # the output is a data set sampled from the structural
+X<-samplingDAG(100,L) 
+sample.cor(X)
+sample.cov(X)
+X
+# the output is a data set sampled from the structural
 #equations implied by the coefficient matrix L
 #------------------------
 #---------------------------------------------------------------------
@@ -261,8 +265,8 @@ wmeanCorrels<-function(corrIs,nIs){
   p<-nrow(corrIs[[1]])
   k<-length(nIs)
   probs<- 1/sum(nIs)*nIs
-  threewayT<-abs(array(unlist(corrIs),c(p,p,k)))
-  Rmean<-apply(threewayT,1:2,weighted.mean,probs)
+  threewayT<-log(abs(array(unlist(corrIs),c(p,p,k)))) # for this one we take the  logs of the absolute values
+  Rmean<-apply(threewayT,1:2,weighted.mean,probs) # then we take the mean of that
   return(list(Rmean=Rmean,probs=probs))
 }
 
@@ -271,7 +275,9 @@ M1<-wmeanCorrels(intervExps$Rs,intervExps$Ns)
 M2<-wmedianCorrels(intervExps$Rs,intervExps$Ns)
 M1$Rmean
 M2$Rmedian
+plot(chowLiu(M1$Rmean))
 
+M2
 p<-nrow(intervExps$Rs[[1]])
 k<-length(intervExps$Ns)
 thway<-array(unlist(intervExps$Rs),c(p,p,k))
@@ -279,6 +285,143 @@ thway[1,2,]
 intervExps$Rs
 thway[,1,]
 
+#-----
+# This function takes and id=identifier, a graph G and a
+# set of intervention targets. 
+# The set of intervention targets contains sample sizes for each experiment
+# and the targeted nodes.
+# The output of this function is a collection
+# of undirected graphs together with the SHD between the 
+# true graph and the one learned by Chow-Liu. 
+# Three learning algorithms are considered here using
+# Chow-Liu with three different weight matrices, using
+# an observed correlation matrix, an weighted median and a weighted mean
+# the ONE in the name refers to the fact that this function does the
+# learning for one instance of a dag a coefficient matrix and a set of
+# intervention targets.
+testLearningONE<-function(id,G,L,interventionTargets){
+    intervExps<-interventionalData(G,L,interventionTargets)
+    R1<-intervExps$Rs[[1]] # Observed correlations
+    R2<-wmeanCorrels(intervExps$Rs,intervExps$Ns) # weighted mean Correls
+    R3<-wmedianCorrels(intervExps$Rs,intervExps$Ns) # weighted median Correls
+    G1<-chowLiu(R1)
+    G2<-chowLiu(R2$Rmean)
+    G3<-chowLiu(R3$Rmedian)
+    I1<- as_adjacency_matrix(G1)
+    I2<- as_adjacency_matrix(G2)
+    I3<- as_adjacency_matrix(G3)
+    gTrue <- graph_from_edgelist( as_edgelist(G), directed = FALSE)
+    Itrue <- as_adjacency_matrix(gTrue)
+    p <- nrow(R1)
+    SHDG1 <- sum(abs((Itrue-I1)))/(2*(p-1)) # compute structural Hamming distance for each learned graph
+    SHDG2 <- sum(abs((Itrue-I2)))/(2*(p-1))
+    SHDG3 <- sum(abs((Itrue-I3)))/(2*(p-1))
+  return(list(Gobsv=G1, Gmean=G2, Gmedian=G3,shd1=SHDG1,shd2=SHDG2,shd3=SHDG3))  
+}
+plot(g)
+gs<-testLearningONE(1,g,L,list(100,c(200,2),c(200,2,3)))
+gs$shd1
+gs$shd2
+gs$shd3
+par(mfrow=c(1,1))
+plot(g)
+plot(gs$Gobsv)
+plot(gs$Gmean)
+plot(gs$Gmedian)
+
+
+# The next function does simulations with single node interventions
+# This function generates a DAG, a list of intervention targets 
+# with corresponding sample sizes and a matrix L of coefficients
+# INPUT:  p = number of nodes in the dag
+#        proprI = percentage of nodes that will get a single target intervention
+#        propObsSample= proportion of the samples in the Observed experiment.
+#        totalSample = sum of the sample sizes of all interventional and obsv. experiments
+interventionalSetting<-function(p,proprI,propObsSample,totalSample){
+  g<-pruferwithskeleton(p)
+  numInterv<- ceiling(p*proprI) # proportion of nodes to intervene on
+  tI <- sample(1:p, numInterv, replace=F)
+  lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
+  nObsv<- propObsSample*totalSample
+  nInterv<-(1-propObsSample)*totalSample/numInterv
+  interventionTargets<- list(nObsv)
+  for(i in tI){
+    interventionTargets<-append(interventionTargets,list(c(nInterv,i)))
+  }
+  return(list(gTrued= g$Directed, gTrues=g$Skeleton, L=lambdaCoeffs, targetsI=interventionTargets))
+}
+
+settingI <-interventionalSetting(6,0.3,0.4, 100)
+plot(graph_from_adjacency_matrix( settingI$gTrued))
+settingI$gTrues
+settingI$L
+settingI$targetsI
+#------------
+#----
+# Setting up low-dimensional learning experiments
+# 25 <= p <= 300
+# 1 <= n/p <= 300
+pstart<- 5 # start of number of nodes
+pend<- 6 # maximum number of nodes
+propI<- 0.2 # percentage of nodes to do single interventions on
+propObsvSample<- 0.1 # percentage of samples to take from the observational distribution.
+x<-0
+y<-0
+results<-c()
+for(p in c(pstart:pend)){
+  y<-y+1
+  for (n in seq(pstart+50,pstart*pend*50,by=50)){
+    x<-x+1
+    print(c(p,n))
+    oneSetting<-interventionalSetting(p,propI,propObsvSample,n)
+    g<-graph_from_adjacency_matrix(oneSetting$gTrued)
+    result<- testLearningONE(1,g,oneSetting$L,oneSetting$targetsI)
+    print(c(result$shd1,result$shd2,result$shd3))
+   
+    results<-rbind(results,c(x,n,p,n/p,result$shd1,result$shd2,result$shd3))
+  }
+}
+
+colnames(results)<-c("id","n","p","n/p","SHDobsv", "SHDmean","SHDmedian")
+summary(results)
+
+x<-data.frame(results)
+par(mfrow=c(1,1))
+boxplot(x$SHDobsv~x$n,
+        data=x,
+        main="ChowLiu Robsv",
+        xlab="Sample Size",
+        ylab="SHD",
+        col="orange",
+        border="brown"
+)
+boxplot(x$Rmedian~x$n,
+        data=x,
+        main="ChowLiu Rmedian",
+        xlab="Sample Size",
+        ylab="Number of Wrong Edges",
+        col="orange",
+        border="brown"
+)
+boxplot(x$Rmean~x$n,
+        data=x,
+        main="ChowLiu Rmean",
+        xlab="Sample Size",
+        ylab="Number of Wrong Edges",
+        col="orange",
+        border="brown"
+)
+
+
+g<-graph_from_adjacency_matrix(oneSetting$gTrued)
+plot(g)
+oneSetting$targetsI
+result<- testLearningONE(1,g,oneSetting$L,oneSetting$targetsI)
+plot(result$Gmean)
+plot(result$Gmedian)
+plot(result$Gobsv)
+plot()
+result
 #-----
 # This function takes and id=identifier, a graph G and a
 # set of intervention targets. 

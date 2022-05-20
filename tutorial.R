@@ -123,3 +123,19 @@ it<-list(list(1),list(2),list(3,4))
 envs<-I_env(E,it)
 envs$Env_matrix
 envs$Env_list
+#----
+edgeList<-matrix(c(1,2,2,3,3,4),nc=2,byrow = TRUE)
+g<-graph_from_edgelist(edgeList,directed = TRUE)
+plot(g)
+L<-coeffLambda(g) 
+XObsv<-samplingDAG(100,L)
+sample.cor(XObsv)
+typeof(XObsv)
+XObsv
+nrow(XObsv)
+
+gg<-pruferwithskeleton(3)
+plotgg
+gg$Skeleton
+g<-graph_from_adjacency_matrix(gg$Skeleton, directed=FALSE)
+plot(g)
