@@ -21,6 +21,9 @@
 # install.packages("SID")
 # install.packages("rmarkdown")
 #install.packages('spatstat')
+# install.packages("poolr")
+# install.packages("harmonicmeanp")
+# install.packages("DescTools")
 library(BNSL)
 library(bnlearn)
 library(igraph)
@@ -33,6 +36,10 @@ library(tidyverse)
 library(ggplot2)
 library(rmarkdown)
 library(spatstat)
+library(poolr)
+library(harmonicmeanp)
+library(DescTools)
+library(Matrix)
 #-------------------------
 
 # Function for calculating sample covariance matrix
@@ -66,7 +73,7 @@ sample.cor <- function(X, Y=NULL){ # Calculate sample correlation matrix
   }
   return(corhat)
 }
- #-----------------------------------------------------------
+#-----------------------------------------------------------
 # Example.
 X<-cbind(rnorm(100),rnorm(100),rnorm(100))
 sample.cor(X)
@@ -174,14 +181,14 @@ interventionalData<-function(G,L,interventionTargets){
     LI<-matrix(0,p,p)
     LI<-L
     if (length(I)>0){
-    for (j in (1:length(tI))) {
-      parentsj<-neighbors(G,tI[j],mode = "in")
-      if (length(parentsj)>0){
-      for (k in parentsj){
-        LI[k,tI[j]]<-runif(1,-1,1)
+      for (j in (1:length(tI))) {
+        parentsj<-neighbors(G,tI[j],mode = "in")
+        if (length(parentsj)>0){
+          for (k in parentsj){
+            LI[k,tI[j]]<-runif(1,-1,1)
+          }
+        }
       }
-      }
-    }
     }
     XI<-samplingDAG(nI,LI)
     RI<-list(sample.cor(XI))
@@ -300,22 +307,22 @@ thway[,1,]
 # learning for one instance of a dag a coefficient matrix and a set of
 # intervention targets.
 testLearningONE<-function(id,G,L,interventionTargets){
-    intervExps<-interventionalData(G,L,interventionTargets)
-    R1<-intervExps$Rs[[1]] # Observed correlations
-    R2<-wmeanCorrels(intervExps$Rs,intervExps$Ns) # weighted mean Correls
-    R3<-wmedianCorrels(intervExps$Rs,intervExps$Ns) # weighted median Correls
-    G1<-chowLiu(R1)
-    G2<-chowLiu(R2$Rmean)
-    G3<-chowLiu(R3$Rmedian)
-    I1<- as_adjacency_matrix(G1)
-    I2<- as_adjacency_matrix(G2)
-    I3<- as_adjacency_matrix(G3)
-    gTrue <- graph_from_edgelist( as_edgelist(G), directed = FALSE)
-    Itrue <- as_adjacency_matrix(gTrue)
-    p <- nrow(R1)
-    SHDG1 <- sum(abs((Itrue-I1)))/(2*(p-1)) # compute structural Hamming distance for each learned graph
-    SHDG2 <- sum(abs((Itrue-I2)))/(2*(p-1))
-    SHDG3 <- sum(abs((Itrue-I3)))/(2*(p-1))
+  intervExps<-interventionalData(G,L,interventionTargets)
+  R1<-intervExps$Rs[[1]] # Observed correlations
+  R2<-wmeanCorrels(intervExps$Rs,intervExps$Ns) # weighted mean Correls
+  R3<-wmedianCorrels(intervExps$Rs,intervExps$Ns) # weighted median Correls
+  G1<-chowLiu(R1)
+  G2<-chowLiu(R2$Rmean)
+  G3<-chowLiu(R3$Rmedian)
+  I1<- as_adjacency_matrix(G1)
+  I2<- as_adjacency_matrix(G2)
+  I3<- as_adjacency_matrix(G3)
+  gTrue <- graph_from_edgelist( as_edgelist(G), directed = FALSE)
+  Itrue <- as_adjacency_matrix(gTrue)
+  p <- nrow(R1)
+  SHDG1 <- sum(abs((Itrue-I1)))/(2*(p-1)) # compute structural Hamming distance for each learned graph
+  SHDG2 <- sum(abs((Itrue-I2)))/(2*(p-1))
+  SHDG3 <- sum(abs((Itrue-I3)))/(2*(p-1))
   return(list(Gobsv=G1, Gmean=G2, Gmedian=G3,shd1=SHDG1,shd2=SHDG2,shd3=SHDG3))  
 }
 plot(g)
@@ -356,6 +363,361 @@ plot(graph_from_adjacency_matrix( settingI$gTrued))
 settingI$gTrues
 settingI$L
 settingI$targetsI
+
+#-----------
+#Functions to learn the CPDAG
+
+#takes as input a list of unoriented edges, a list of correlation matrices, threshold
+#the distribution to use for to compute the p-values, the method to combine them
+#a vector of sample sizes N
+#beta computes the p_values individually using the squared of the correlations and then combine them with one of the methods
+#chi_2_p computes the p_values individually using the (squared) z-transformation and then combine them with one of the methods
+#chi_2_test perfoms sums all the (squared) z-transformations of the correlations and then perform a chi-squared test
+#gives as output two lists of oriented/unoriented  edges
+triplets<-function(E,S,thres,distribution=c("beta","chi_2_p","chi_2_test"),method=c("Fisher","Harmonic","Stouffer"),N){
+  m<-(nrow(E)+1)
+  V_v<-c(1:(m+1))  #list of vertices to "check" i.e possible colliders
+  UE<-E
+  O<-numeric()       
+  vcheck<-numeric()       #list of already checked vertices
+  repeat{
+    if(length(V_v)==0){
+      LIST<-list(Olist=O,Ulist=UE)
+      return(LIST)
+      break
+    }
+    update<-FALSE               #needed to break the "repeat" loop when O can't be updated anymore
+    for(i in c(1:length(V_v))){
+      vupdate<-FALSE            #needed to check if there some edges have been oriented in this step of the for cycle
+      vcheck<-numeric()          #list of vertices that can't be colliders
+      v<-V_v[i]
+      if(length(UE)>2){
+        Lu1<-which(UE[,1]==v)    #edges in which v appears as 1st element
+        Lu2<-which(UE[,2]==v)    #edges in which v appears as 2nd element
+      }
+      else{
+        Lu1<-which(UE[1]==v)
+        Lu2<-which(UE[2]==v)
+      }
+      L<-append(Lu1,Lu2)
+      l<-length(L)
+      if(l==1){
+        vcheck<-append(vcheck,i)  #if there is only 1 edge containing it, v can't be a collider. 
+      }
+      if(length(O)>0){
+        Li<-which(O[,2]==v)       #check if there is some already oriented edge that points toward v.
+      }
+      else{
+        Li<-numeric()
+      }
+      if((length(Li)>0)&(l>0)){   #if there are edges pointing towards v, and unoriented edges containig v orient the unoriented edges.
+        e<-O[Li[1],]  
+        O<-withincoming(S,e,v,Lu1,Lu2,O,UE,thres,distribution,method,N)   #updated list of oriented edges
+        vcheck<-append(vcheck,i)
+        update<-TRUE
+        vupdate<-TRUE
+      }
+      else{
+        if(l>1){                  #if there is more than 1 unoriented edge containing v, check if v is a collider.
+          d<-onlyundirected(S,UE,Lu1,Lu2,thres,distribution,method,N)   #d[i,j]=1 if the two edges i,j forms a collider with v as center
+          col<-which(d==1)       #position of the colliders 
+          if(length(col)>0){
+            a<-col[1]%%l         #position of the first collider
+            if(a==0){
+              a<-l
+            }
+            d<-d+t(d)
+            d<-d+diag(dim(d)[1])
+            
+            d<-d[a,]             #edges that collide with the first collider 
+            if(a<=length(Lu1)){
+              e<-UE[Lu1[a],2]
+              O<-withlist(Lu1,Lu2,O,UE,d)   #updated list of oriented edges
+            }
+            else{
+              e<-UE[Lu2[a],1]
+              O<-withlist(Lu1,Lu2,O,UE,d)   #updated list of oriented edges
+            }
+            vcheck<-append(vcheck,i)        
+            update<-TRUE
+            vupdate<-TRUE
+          }
+        }
+      }
+      if(vupdate){
+        if(length(UE)>2){
+          UE<-UE[-L,]
+        }
+        else{
+          LIST<-list(Olist=O,Ulist=numeric())
+          return(LIST)
+          break
+        }
+      }
+    }
+    if(update==FALSE){
+      LIST<-list(Olist=O,Ulist=UE)
+      return(LIST)
+      break
+    }
+    V_v<-V_v[-vcheck]        #remove the checked vertices from the list of possible colliders
+  }
+}
+
+##AUXILIARY FUNCTIONS USED IN TRIPLETS
+#return 1 if j is a collider and 0 otherwise
+tripletcomp<-function(S,i,j,k,thres,distribution,method,N){
+  if(distribution=="beta"){
+    p_val<-beta_test(S,N,i,k)
+    if(method=="Fisher"){
+      p<-fisher(p_val)$p
+    }
+    if(method=="Harmonic"){
+      p<-hmp.stat(p_val,N/sum(N))
+    }
+    if(method=="Stouffer"){
+      st<-sqrt(N/sum(N))%*%qnorm(p_val)
+      p<-pnorm(st,lower.tail = FALSE)
+    }
+  }
+  
+  if(distribution=="chi_2_p"){
+    p_val<-z_test(S,N,i,k)
+    if(method=="Fisher"){
+      p<-fisher(p_val)$p
+    }
+    if(method=="Harmonic"){
+      p<-hmp.stat(p_val,N/sum(N))
+    }
+    if(method=="Stouffer"){
+      st<-sqrt(N/sum(N))%*%qnorm(p_val)
+      p<-pnorm(st,lower.tail = FALSE)
+    }
+  }
+  if(distribution=="chi_2_test"){
+    st<-0
+    for(c in c(1:length(S))){
+      rho<-S[[c]][i,k]
+      st<-st+(sqrt(N[c]-3)*FisherZ(rho))^2
+    }
+    p<-pchisq(st,df=length(S),lower.tail = FALSE)
+  }
+  if(p<thres){
+    r<-0
+  }
+  else{
+    r<-1
+  }
+  return(r)
+}
+
+#takes as input a list the correlation matrix, an oriented edge, a vertex v, the two lists of edges containing v, 
+#the lists of oriented/unoriented edges and a threshold
+#gives as output the updated list of oriented edges
+withincoming<-function(S,e,v,Lu1,Lu2,O,UE,thres,distribution,method,N){
+  d<-matrix(0,nrow = length(Lu1)+length(Lu2),ncol=1) 
+  if(length(Lu1)>0){
+    for(j in c(1:length(Lu1))){
+      if(length(UE)>2){
+        d[j]<-tripletcomp(S,e[1],v,UE[Lu1[j],2],thres,distribution,method,N)
+      }
+      else{
+        d[j]<-tripletcomp(S,e[1],v,UE[2],thres,distribution,method,N)
+      }
+    }
+  }
+  if(length(Lu2)>0){
+    for(j in c(1:length(Lu2))){
+      if(length(UE)>2){
+        d[length(Lu1)+j]<-tripletcomp(S,e[1],v,UE[Lu2[j],1],thres,distribution,method,N)
+      }
+      else{
+        d[length(Lu1)+j]<-tripletcomp(S,e[1],v,UE[1],thres,distribution,method,N)
+      }
+    }
+  }
+  O<-withlist(Lu1,Lu2,O,UE,d)
+  return(O)
+}
+
+#takes as input a correlation matrix, a list of undirected egdes, the two lists of edges having v as 1st or 2nd vertex and a threshold
+#gives as output a matrix d, with d[i,j]=1 if the two edges i,j forms a collider with v as center
+onlyundirected<-function(S,UE,Lu1,Lu2,thres,distribution,method,N){
+  L<-append(Lu1,Lu2)
+  l<-length(L)
+  d<-matrix(0,nrow =l,ncol=l)
+  for(i in c(1:(l-1))){
+    for(j in c((i+1):l)){
+      if(i<=length(Lu1)){
+        count_i<-2
+      }
+      else{
+        count_i<-1
+      }
+      if(j<=length(Lu1)){
+        count_j<-2
+      }
+      else{
+        count_j<-1
+      }
+      d[i,j]<-tripletcomp(S,UE[L[i],count_i],v,UE[L[j],count_j],thres,distribution,method,N)
+    }
+  }
+  return(d)
+}
+
+#takes as input the two lists of edges containig a vertex v, and the lists of oriented/unoriented edges.
+#gives as output the updated list of oriented edges.
+withlist<-function(Lu1,Lu2,O,UE,d){
+  for(j in c(1:length(d))){
+    if(j<=length(Lu1)){
+      if(d[j]==0){
+        if(length(UE)>2){
+          O<-rbind(O,UE[Lu1[j],])  
+        }
+        else{
+          O<-rbind(O,UE)  
+        }
+      }
+      else{
+        if(length(UE)>2){
+          O<-rbind(O,rev(UE[Lu1[j],]))
+        }
+        else{
+          O<-rbind(O,rev(UE))
+        }
+      }
+    }
+    else{
+      if(d[j]==0){
+        if(length(UE)>2){
+          O<-rbind(O,rev(UE[Lu2[j-length(Lu1)],]))
+        }
+        else{
+          O<-rbind(O,rev(UE))
+        }
+      }
+      else{
+        if(length(UE)>2){
+          O<-rbind(O,UE[Lu2[j-length(Lu1)],])
+        }
+        else{
+          O<-rbind(O,UE)
+        }
+      }
+    }
+  }
+  return(O)
+}
+
+
+##Auxiliary Functions
+
+#takes as input a list of correlation matrices, a vector of sample sizes and indices of
+#the two variables to test
+#gives as output the p-values on each intervention sample computed as with a beta distribution test
+beta_test<-function(S,N,i,k){
+  p_val<-numeric()
+  for(c in c(1:length(S))){
+    rho<-S[[c]][i,k]
+    p_val[c]<-pbeta(rho^2,0.5,0.5*(N[c]-2),lower.tail = FALSE)
+  }
+  return(p_val)
+}
+
+#takes as input a list of correlation matrices, a vector of sample sizes and indices of
+#the two variables to test
+#gives as output the p-values on each intervention sample computed as with a chisqared distribution test
+z_test<-function(S,N,i,k){
+  p_val<-numeric()
+  for(c in c(1:length(S))){
+    rho<-S[[c]][i,k]
+    z<-sqrt(N[c]-3)*FisherZ(rho)
+    p_val[c]<-pnorm(z,lower.tail = FALSE)
+  }
+  return(p_val)
+}
+
+
+#Weight Matrix
+## 
+pruferwithskeleton <- function(k){
+  if(k>2){
+    P_orig <- ceiling(runif(k-2, min = 0, max = k))
+    P <- P_orig
+    V_orig <- 1:k
+    V <- V_orig
+    adj_matrix <- Matrix(matrix(numeric(k * k), ncol = k),sparse=TRUE)
+    adj_matrixs <-Matrix(matrix(numeric(k * k), ncol = k),sparse=TRUE) 
+    
+    for(i in 1:(k-2)){
+      complement <- setdiff(V, P)
+      v_0 <- min(complement)
+      V <- setdiff(V, v_0)
+      adj_matrixs[which(V_orig == v_0), which(V_orig == P_orig[i])] <- adj_matrixs[which(V_orig == P_orig[i]), which(V_orig == v_0)]<-1
+      
+      m<-rbinom(1,1,0.5)
+      if(m==0){
+        adj_matrix[which(V_orig == v_0), which(V_orig == P_orig[i])] <- 1
+      }
+      else{
+        adj_matrix[which(V_orig == P_orig[i]), which(V_orig == v_0)] <- 1
+      }
+      P <- P[2:length(P)]
+    }
+    adj_matrixs[which(V_orig == V[1]), which(V_orig == V[2])]<-adj_matrixs[which(V_orig == V[2]), which(V_orig == V[1])]<-1
+    m<-rbinom(1,1,0.5)
+    if(m==0){
+      adj_matrix[which(V_orig == V[1]), which(V_orig == V[2])] <- 1
+    }
+    else{
+      adj_matrix[which(V_orig == V[2]), which(V_orig == V[1])] <- 1
+    }
+  }
+  else{
+    adj_matrixs<-matrix(c(0,1,1,0),nrow=2,byrow=TRUE)
+    m<-rbinom(1,1,0.5)
+    if(m==0){
+      adj_matrix<-matrix(c(0,1,0,0),nrow=2,byrow=TRUE)
+    }
+    else{
+      adj_matrix<-matrix(c(0,0,1,0),nrow=2,byrow=TRUE)
+    }
+  }
+  ret<-list(Directed=adj_matrix,Skeleton=adj_matrixs)
+  return(ret)
+}
+
+#get edgelist from adjacecncy matrix
+edgelist_toadjmatrix<-function(L){
+  n<-dim(L)[1]
+  I<-Matrix(nrow=(n+1),ncol=(n+1),data=0,sparse=TRUE)
+  for(i in c(1:n)){
+    I[L[i,1],L[i,2]]<-1
+  }
+  return(I)
+}
+
+#----------
+#CPDAG computation example
+
+distribution="beta" 
+method="Stouffer"
+threshold=0.1
+p<-10
+propI<-0.5
+propObsvSample<-0.2
+totalSample<-1000
+
+IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
+G<-graph_from_adjacency_matrix(IS$gTrued)
+ID<-interventionalData(G,IS$L,IS$targetsI)
+C_list<-ID$Rs
+medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
+E<-get.edgelist(chowLiu(medianC))
+CP<-triplets(E,C_list,threshold,distribution,method,ID$Ns)
+
+
 #------------
 #----
 # Setting up low-dimensional learning experiments
@@ -377,7 +739,7 @@ for(p in c(pstart:pend)){
     g<-graph_from_adjacency_matrix(oneSetting$gTrued)
     result<- testLearningONE(1,g,oneSetting$L,oneSetting$targetsI)
     print(c(result$shd1,result$shd2,result$shd3))
-   
+    
     results<-rbind(results,c(x,n,p,n/p,result$shd1,result$shd2,result$shd3))
   }
 }
@@ -435,26 +797,26 @@ result
 testLearning<-function(id,G,L,II){
   results<-c()
   for (n in c(50,100,500,700,1000,2000,3000,4000,5000)){
-   intervExps<-interventionalData(n,G,L,II)
-   k<-length(intervExps[[1]])
-   p<-nrow(L)
-   threewayT<-array(unlist(intervExps[[1]]),c(p,p,k))
-   Rmedian<-apply(threewayT,1:2,median)
-   Rmean<-apply(threewayT,1:2,prod)
-   Gobsv<-chowLiu(intervExps[[1]][[1]])  # Learn a skeleton from an obsv correlation,
-   Gmedian<-chowLiu(Rmedian)           # Learn skeleton from median correlation
-   Gmean<-chowLiu(Rmean)               # Learn skeleton from mean correlation
-   Gu<-graph_from_edgelist(as_edgelist(G),directed = FALSE)
-   dif1<-Gu%m%Gmedian
-   dif2<-Gmedian%m%Gu
-   difMedian<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))
-   dif1<-Gu%m%Gmean
-   dif2<-Gmean%m%Gu
-   difMean<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))
-   dif1<-Gu%m%Gobsv
-   dif2<-Gobsv%m%Gu
-   difObsv<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))/ (p-1)
-   results<-rbind(results,c(id,n,p,difObsv,difMedian,difMean))
+    intervExps<-interventionalData(n,G,L,II)
+    k<-length(intervExps[[1]])
+    p<-nrow(L)
+    threewayT<-array(unlist(intervExps[[1]]),c(p,p,k))
+    Rmedian<-apply(threewayT,1:2,median)
+    Rmean<-apply(threewayT,1:2,prod)
+    Gobsv<-chowLiu(intervExps[[1]][[1]])  # Learn a skeleton from an obsv correlation,
+    Gmedian<-chowLiu(Rmedian)           # Learn skeleton from median correlation
+    Gmean<-chowLiu(Rmean)               # Learn skeleton from mean correlation
+    Gu<-graph_from_edgelist(as_edgelist(G),directed = FALSE)
+    dif1<-Gu%m%Gmedian
+    dif2<-Gmedian%m%Gu
+    difMedian<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))
+    dif1<-Gu%m%Gmean
+    dif2<-Gmean%m%Gu
+    difMean<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))
+    dif1<-Gu%m%Gobsv
+    dif2<-Gobsv%m%Gu
+    difObsv<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))/ (p-1)
+    results<-rbind(results,c(id,n,p,difObsv,difMedian,difMean))
   }
   return(results)
 }
@@ -490,7 +852,6 @@ for (i in (1:length(polytreeList))){
   newTest<-testLearning(i,polytreeList[[i]],list(c(2)))
   results<-rbind(results,newTest)
 }
-
 
 
 
