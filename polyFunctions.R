@@ -74,11 +74,9 @@ sample.cor <- function(X, Y=NULL){ # Calculate sample correlation matrix
   return(corhat)
 }
 #-----------------------------------------------------------
-# Example.
-X<-cbind(rnorm(100),rnorm(100),rnorm(100))
-sample.cor(X)
+
 #----------
-# Code for creating a random matrix of coefficients Lambda
+# Creating a random matrix of coefficients Lambda
 # starting from a dag G and its nodes
 # G = Dag,
 coeffLambda<-function(G){
@@ -94,13 +92,8 @@ coeffLambda<-function(G){
   }
   return(Lambda)
 }
-# Example:
-el<-matrix(c(1,2,2,3,3,4),nc=2,byrow = TRUE)
-g<-graph_from_edgelist(el,directed = TRUE)
-plot(g)
-L<-coeffLambda(g) # matrix of coefficients according to G
 #-----------------
-# Code for creating a sample from a dagModel specified by a
+# Creating a sample from a dagModel specified by a
 # matrix of coefficients Lambda
 samplingDAG<-function(n,Lambda){
   p<-nrow(Lambda)
@@ -118,17 +111,6 @@ samplingDAG<-function(n,Lambda){
   }
   return(Xmat)
 }
-# Example
-el<-matrix(c(1,2,2,3,3,4),nc=2,byrow = TRUE)
-g<-graph_from_edgelist(el,directed = TRUE)
-plot(g)
-L<-coeffLambda(g)
-X<-samplingDAG(100,L) 
-sample.cor(X)
-sample.cov(X)
-X
-# the output is a data set sampled from the structural
-#equations implied by the coefficient matrix L
 #------------------------
 #---------------------------------------------------------------------
 # This functions learns a skeleton from the absolute value
@@ -139,19 +121,7 @@ chowLiu<-function(R){
   g<- graph_from_edgelist(edge.list,directed = FALSE)
   return(g)
 }
-# Example 
-el<-matrix(c(1,2,2,3,3,4),nc=2,byrow = TRUE)
-g<-graph_from_edgelist(el,directed = TRUE)
-plot(g)
-L<-coeffLambda(g)
-X<-samplingDAG(1000,L)
-g1<-chowLiu(sample.cor(X))
-plot(g1)
-# The problem with the ChowLiu function from the bnlearn package
-# is that its input is a dataframe, we want the input to be the
-# The correlation matrix, the absolute value of this matrix
-# is used as the weight matrix to perform the maximum weight
-# spanning tree calculation.
+
 #-------------------------------------------------------------
 #-- interventionalData ---- #
 #-- This function takes a dag G and a list
@@ -199,16 +169,7 @@ interventionalData<-function(G,L,interventionTargets){
   RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList)
   return(RLlist)
 }
-# Example
-el<-matrix(c(1,3,2,3,3,4,4,5),nc=2,byrow = TRUE)
-g<-graph_from_edgelist(el,directed = TRUE)
-plot(g)
-L<-coeffLambda(g)
-intervExps<-interventionalData(g,L,list(100,c(100,2),c(300,2,3)))
-intervExps$Rs # list of sample correlations
-intervExps$Ls # list of actual intervened coefficients
-intervExps$Ns # list of sample sizes
-sum(intervExps$Ns)
+
 
 #-wmedianCorrels
 # INPUT: corrsIs = Ordered List of observed correlation matrices
@@ -232,26 +193,7 @@ wmedianCorrels<-function(corrIs,nIs){
   return(list(Rmedian=Rmedian,probs=probs))
 }
 
-## Tests for the median correlation matrix with three matrices
 
-m1<-matrix(c(1,1,0,1),nrow=2, byrow = TRUE)
-m2<-matrix(c(1,1,0.2,1),nrow = 2, byrow = TRUE)
-m3<-matrix(c(1.5,1,0.5,1),nrow = 2, byrow = TRUE)
-wmedianCorrels(list(m1,m2,m3),c(50,50,50))
-wmeanCorrels(list(m1,m2,m3),c(50,50,10))
-## Tests for the median correlation matrix with 
-# intrventional experiments.
-
-el<-matrix(c(1,3,2,3,3,4,4,5),nc=2,byrow = TRUE)
-g<-graph_from_edgelist(el,directed = TRUE)
-plot(g)
-L<-coeffLambda(g)
-intervExps<-interventionalData(g,L,list(100,c(100,2),c(300,2,3)))
-intervExps$Rs # list of sample correlations
-intervExps$Ls # list of actual intervened coefficients
-intervExps$Ns # list of sample sizes
-wmedianCorrels(intervExps$Rs,intervExps$Ns)
-##-------------------------------------------
 
 #---- Weighted Mean correlation matrix
 #----
@@ -277,20 +219,6 @@ wmeanCorrels<-function(corrIs,nIs){
   return(list(Rmean=Rmean,probs=probs))
 }
 
-# Tests with wmeanCorrels
-M1<-wmeanCorrels(intervExps$Rs,intervExps$Ns)
-M2<-wmedianCorrels(intervExps$Rs,intervExps$Ns)
-M1$Rmean
-M2$Rmedian
-plot(chowLiu(M1$Rmean))
-
-M2
-p<-nrow(intervExps$Rs[[1]])
-k<-length(intervExps$Ns)
-thway<-array(unlist(intervExps$Rs),c(p,p,k))
-thway[1,2,]
-intervExps$Rs
-thway[,1,]
 
 #-----
 # This function takes and id=identifier, a graph G and a
@@ -325,16 +253,7 @@ testLearningONE<-function(id,G,L,interventionTargets){
   SHDG3 <- sum(abs((Itrue-I3)))/(2*(p-1))
   return(list(Gobsv=G1, Gmean=G2, Gmedian=G3,shd1=SHDG1,shd2=SHDG2,shd3=SHDG3))  
 }
-plot(g)
-gs<-testLearningONE(1,g,L,list(100,c(200,2),c(200,2,3)))
-gs$shd1
-gs$shd2
-gs$shd3
-par(mfrow=c(1,1))
-plot(g)
-plot(gs$Gobsv)
-plot(gs$Gmean)
-plot(gs$Gmedian)
+
 
 
 # The next function does simulations with single node interventions
@@ -358,11 +277,6 @@ interventionalSetting<-function(p,proprI,propObsSample,totalSample){
   return(list(gTrued= g$Directed, gTrues=g$Skeleton, L=lambdaCoeffs, targetsI=interventionTargets))
 }
 
-settingI <-interventionalSetting(6,0.3,0.4, 100)
-plot(graph_from_adjacency_matrix( settingI$gTrued))
-settingI$gTrues
-settingI$L
-settingI$targetsI
 
 #-----------
 #Functions to learn the CPDAG
