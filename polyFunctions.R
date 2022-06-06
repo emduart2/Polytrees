@@ -134,7 +134,7 @@ chowLiu<-function(R){
 #       List1= This is a list of correlation matrices
 #              obtained from the interventional experiments.
 #       List2= This is a list of coefficient matrices with the values
-#              of the intervened coeffocients
+#              of the intervened coefficients
 #       List3= This is a list of the sample size of each intervention
 # 
 interventionalData<-function(G,L,interventionTargets){
@@ -621,151 +621,23 @@ threshold=0.1
 p<-10
 propI<-0.5
 propObsvSample<-0.2
-totalSample<-1000
+totalSample<-10000
 
 IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
 G<-graph_from_adjacency_matrix(IS$gTrued)
 ID<-interventionalData(G,IS$L,IS$targetsI)
+ID
 C_list<-ID$Rs
 medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
+medianC<-wmeanCorrels(C_list,ID$Ns)$Rmean
 E<-get.edgelist(chowLiu(medianC))
 CP<-triplets(E,C_list,threshold,distribution,method,ID$Ns)
-
-
+CP
+plot(G)
 #------------
-#----
-# Setting up low-dimensional learning experiments
-# 25 <= p <= 300
-# 1 <= n/p <= 300
-pstart<- 5 # start of number of nodes
-pend<- 6 # maximum number of nodes
-propI<- 0.2 # percentage of nodes to do single interventions on
-propObsvSample<- 0.1 # percentage of samples to take from the observational distribution.
-x<-0
-y<-0
-results<-c()
-for(p in c(pstart:pend)){
-  y<-y+1
-  for (n in seq(pstart+50,pstart*pend*50,by=50)){
-    x<-x+1
-    print(c(p,n))
-    oneSetting<-interventionalSetting(p,propI,propObsvSample,n)
-    g<-graph_from_adjacency_matrix(oneSetting$gTrued)
-    result<- testLearningONE(1,g,oneSetting$L,oneSetting$targetsI)
-    print(c(result$shd1,result$shd2,result$shd3))
-    
-    results<-rbind(results,c(x,n,p,n/p,result$shd1,result$shd2,result$shd3))
-  }
-}
-
-colnames(results)<-c("id","n","p","n/p","SHDobsv", "SHDmean","SHDmedian")
-summary(results)
-
-x<-data.frame(results)
-par(mfrow=c(1,1))
-boxplot(x$SHDobsv~x$n,
-        data=x,
-        main="ChowLiu Robsv",
-        xlab="Sample Size",
-        ylab="SHD",
-        col="orange",
-        border="brown"
-)
-boxplot(x$Rmedian~x$n,
-        data=x,
-        main="ChowLiu Rmedian",
-        xlab="Sample Size",
-        ylab="Number of Wrong Edges",
-        col="orange",
-        border="brown"
-)
-boxplot(x$Rmean~x$n,
-        data=x,
-        main="ChowLiu Rmean",
-        xlab="Sample Size",
-        ylab="Number of Wrong Edges",
-        col="orange",
-        border="brown"
-)
-
-
-g<-graph_from_adjacency_matrix(oneSetting$gTrued)
-plot(g)
-oneSetting$targetsI
-result<- testLearningONE(1,g,oneSetting$L,oneSetting$targetsI)
-plot(result$Gmean)
-plot(result$Gmedian)
-plot(result$Gobsv)
-plot()
-result
-#-----
-# This function takes and id=identifier, a graph G and a
-# set of intervention targets. 
-# for each of the sample sizes 50,100,500,1000,500
-# it creates interventional data sampled
-# from the same structural equation model.
-# Using the list of correlation matrices for the interventional
-# experiments, it then does a ChowLiu maximum-weight spanning tree
-# to learn a skeleton. It then records the number of edges
-# that the algorithm got wrong for each learning method
-testLearning<-function(id,G,L,II){
-  results<-c()
-  for (n in c(50,100,500,700,1000,2000,3000,4000,5000)){
-    intervExps<-interventionalData(n,G,L,II)
-    k<-length(intervExps[[1]])
-    p<-nrow(L)
-    threewayT<-array(unlist(intervExps[[1]]),c(p,p,k))
-    Rmedian<-apply(threewayT,1:2,median)
-    Rmean<-apply(threewayT,1:2,prod)
-    Gobsv<-chowLiu(intervExps[[1]][[1]])  # Learn a skeleton from an obsv correlation,
-    Gmedian<-chowLiu(Rmedian)           # Learn skeleton from median correlation
-    Gmean<-chowLiu(Rmean)               # Learn skeleton from mean correlation
-    Gu<-graph_from_edgelist(as_edgelist(G),directed = FALSE)
-    dif1<-Gu%m%Gmedian
-    dif2<-Gmedian%m%Gu
-    difMedian<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))
-    dif1<-Gu%m%Gmean
-    dif2<-Gmean%m%Gu
-    difMean<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))
-    dif1<-Gu%m%Gobsv
-    dif2<-Gobsv%m%Gu
-    difObsv<-max(length(as_edgelist(dif1)),length(as_edgelist(dif2)))/ (p-1)
-    results<-rbind(results,c(id,n,p,difObsv,difMedian,difMean))
-  }
-  return(results)
-}
-#------------------
-
-
-#--------------------
-#--- Data set of polytrees
-el1<-matrix(c(1,2,2,3),nc=2,byrow = TRUE)
-g1<-graph_from_edgelist(el1,directed = TRUE)
-el2<-matrix(c(1,2,2,3,3,4),nc=2,byrow = TRUE)
-g2<-graph_from_edgelist(el2,directed = TRUE)
-el3<-matrix(c(1,3,2,3,3,4),nc=2,byrow = TRUE)
-g3<-graph_from_edgelist(el3,directed = TRUE)
-el4<-matrix(c(1,4,2,4,3,4),nc=2,byrow = TRUE)
-g4<-graph_from_edgelist(el4,directed = TRUE)
-el5<-matrix(c(1,2,2,3,3,4,4,5),nc=2,byrow = TRUE) 
-g5<-graph_from_edgelist(el5,directed = TRUE)
-el6<-matrix(c(1,5,2,3,3,4,3,5),nc=2,byrow = TRUE)
-g6<-graph_from_edgelist(el6,directed = TRUE)
-el7<-matrix(c(1,2,2,3,3,4,4,5,4,6),nc=2,byrow = TRUE)
-g7<-graph_from_edgelist(el7,directed = TRUE)
-el8<-matrix(c(1,2,2,3,3,4,4,5,5,6),nc=2,byrow = TRUE)
-g8<-graph_from_edgelist(el8,directed = TRUE)
-polytreeList<-list(g1,g2,g3,g4,g5,g6,g7,g8)
-
-#---
-# List of random polytrees on fixed number of nodes
-
-#--- Data set of polytrees
-results<-c()
-for (i in (1:length(polytreeList))){
-  newTest<-testLearning(i,polytreeList[[i]],list(c(2)))
-  results<-rbind(results,newTest)
-}
-
+C_list
+ID
+ID$Rs
+CP
 
 

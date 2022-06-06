@@ -235,9 +235,39 @@ sample.cor(XObsv)
 typeof(XObsv)
 XObsv
 nrow(XObsv)
+#-- A list of Polytrees -----#
+#--------------------
+#--- Some examples of polytrees given by list of edges.
+el1<-matrix(c(1,2,2,3),nc=2,byrow = TRUE)
+g1<-graph_from_edgelist(el1,directed = TRUE)
+el2<-matrix(c(1,2,2,3,3,4),nc=2,byrow = TRUE)
+g2<-graph_from_edgelist(el2,directed = TRUE)
+el3<-matrix(c(1,3,2,3,3,4),nc=2,byrow = TRUE)
+g3<-graph_from_edgelist(el3,directed = TRUE)
+el4<-matrix(c(1,4,2,4,3,4),nc=2,byrow = TRUE)
+g4<-graph_from_edgelist(el4,directed = TRUE)
+el5<-matrix(c(1,2,2,3,3,4,4,5),nc=2,byrow = TRUE) 
+g5<-graph_from_edgelist(el5,directed = TRUE)
+el6<-matrix(c(1,5,2,3,3,4,3,5),nc=2,byrow = TRUE)
+g6<-graph_from_edgelist(el6,directed = TRUE)
+el7<-matrix(c(1,2,2,3,3,4,4,5,4,6),nc=2,byrow = TRUE)
+g7<-graph_from_edgelist(el7,directed = TRUE)
+el8<-matrix(c(1,2,2,3,3,4,4,5,5,6),nc=2,byrow = TRUE)
+g8<-graph_from_edgelist(el8,directed = TRUE)
+polytreeList<-list(g1,g2,g3,g4,g5,g6,g7,g8)
+#--------------
+#--- Data set of polytrees
+results<-c()
+for (i in (1:length(polytreeList))){
+  newTest<-testLearning(i,polytreeList[[i]],list(c(2)))
+  results<-rbind(results,newTest)
+}
 
 gg<-pruferwithskeleton(3)
 plotgg
 gg$Skeleton
 g<-graph_from_adjacency_matrix(gg$Skeleton, directed=FALSE)
 plot(g)
+source("Intervention_functions.R")
+source("polyFunctions.R")
+setwd("/Users/ElianaDuarte/Documents/gitHubRepos/Polytrees")
