@@ -16,7 +16,6 @@ L<-coeffLambda(g)
 X<-samplingDAG(100,L) 
 sample.cor(X)
 sample.cov(X)
-X
 # the output is a data set sampled from the structural
 #equations implied by the coefficient matrix L
 
@@ -45,7 +44,8 @@ L<-coeffLambda(g)
 X<-samplingDAG(1000,L)
 g1<-chowLiu(sample.cor(X))
 plot(g1)
-
+as.matrix(g1,"edgelist")
+as.matrix(g,"edgelist")
 # Example 
 el<-matrix(c(1,2,2,3,3,4),nc=2,byrow = TRUE)
 g<-graph_from_edgelist(el,directed = TRUE)
@@ -67,7 +67,8 @@ el<-matrix(c(1,3,2,3,3,4,4,5),nc=2,byrow = TRUE)
 g<-graph_from_edgelist(el,directed = TRUE)
 plot(g)
 L<-coeffLambda(g)
-intervExps<-interventionalData(500,g,L,list(c(2),c(3)))
+intervExps<-interventionalData(g,L,list(100,c(100,2),c(300,3)))
+
 intervExps[[1]] # List of correlation matrices
 intervExps[[2]] # List of coefficient matrices from which the sample correlation matrices
 # were sampled. In particular these matrices have equal entries except for the entries
@@ -88,9 +89,23 @@ sum(intervExps$Ns)
 
 m1<-matrix(c(1,1,0,1),nrow=2, byrow = TRUE)
 m2<-matrix(c(1,1,0.2,1),nrow = 2, byrow = TRUE)
-m3<-matrix(c(1.5,1,0.5,1),nrow = 2, byrow = TRUE)
-wmedianCorrels(list(m1,m2,m3),c(50,50,50))
-wmeanCorrels(list(m1,m2,m3),c(50,50,10))
+m3<-matrix(c(1,1,0.5,1),nrow = 2, byrow = TRUE)
+wmedianCorrels(list(m1,m2,m1),c(1,1,1))
+wmeanCorrels(list(m1,m2,m2),c(0.9,0.1,0))
+corrIs<- list(m2,m2,m2)
+nIs<-c(5,5,5)
+probs
+wmedianCorrels<-function(corrIs,nIs){
+  p<-nrow(corrIs[[1]])
+  k<-length(nIs)
+  probs<- 1/sum(nIs)*nIs
+  threewayT<-array(unlist(corrIs),c(p,p,k))
+  Rmedian<-apply(threewayT,1:2,weighted.median,probs,type=1)
+  return(list(Rmedian=Rmedian,probs=probs))
+}
+
+#-- Sample at random from the union of to intervals
+
 ## Tests for the median correlation matrix with 
 # intrventional experiments.
 
@@ -121,7 +136,9 @@ thway[1,2,]
 intervExps$Rs
 thway[,1,]
 #-----
-
+#Sampling from two disjoint intervals
+l1<-ruunif(10,0.3,1)
+l1
 # Example:-------------------
 plot(g)
 gs<-testLearningONE(1,g,L,list(100,c(200,2),c(200,2,3)))
@@ -268,6 +285,8 @@ plotgg
 gg$Skeleton
 g<-graph_from_adjacency_matrix(gg$Skeleton, directed=FALSE)
 plot(g)
+#-----
+setwd("/Users/ElianaDuarte/Documents/gitHubRepos/Polytrees")
 source("Intervention_functions.R")
 source("polyFunctions.R")
-setwd("/Users/ElianaDuarte/Documents/gitHubRepos/Polytrees")
+

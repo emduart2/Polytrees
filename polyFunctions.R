@@ -74,6 +74,21 @@ sample.cor <- function(X, Y=NULL){ # Calculate sample correlation matrix
   return(corhat)
 }
 #-----------------------------------------------------------
+# Sampling n values independently 
+# uniformly at random from two disjoint intervals (-maxx,-minn)U(minn,maxx)
+ruunif<-function(n,minn,maxx){
+  l<-c()
+  for (i in c(1:n)){
+    c<-rbinom(1,1,0.5)
+    if(c==0){ 
+      l<-append(l,runif(1,-maxx,-minn))
+    }
+    else{
+      l<-append(l,runif(1,minn,maxx))
+    }
+  }
+  return(l)
+}
 
 #----------
 # Creating a random matrix of coefficients Lambda
@@ -83,7 +98,7 @@ coeffLambda<-function(G){
   p<-gorder(G)
   Lambda<-matrix(0,p,p)
   edg<-as_edgelist(G) # This is the list of directed edges
-  lambdaCoeff<-runif(nrow(edg),min=-1,max = 1) #this is a random vector of coefficients
+  lambdaCoeff<-ruunif(nrow(edg),0.3,1) #this is a random vector of coefficients
   # Upper triangular matrix with Lambda coefficients
   for(j in (1:nrow(edg))){
     r<-edg[j,1]
@@ -155,7 +170,7 @@ interventionalData<-function(G,L,interventionTargets){
         parentsj<-neighbors(G,tI[j],mode = "in")
         if (length(parentsj)>0){
           for (k in parentsj){
-            LI[k,tI[j]]<-runif(1,-1,1)
+            LI[k,tI[j]]<-ruunif(1,0.3,1)
           }
         }
       }
@@ -214,7 +229,7 @@ wmeanCorrels<-function(corrIs,nIs){
   p<-nrow(corrIs[[1]])
   k<-length(nIs)
   probs<- 1/sum(nIs)*nIs
-  threewayT<-log(abs(array(unlist(corrIs),c(p,p,k)))) # for this one we take the  logs of the absolute values
+  threewayT<-abs(array(unlist(corrIs),c(p,p,k))) # for this one we take the  logs of the absolute values
   Rmean<-apply(threewayT,1:2,weighted.mean,probs) # then we take the mean of that
   return(list(Rmean=Rmean,probs=probs))
 }
@@ -617,20 +632,19 @@ edgelist_toadjmatrix<-function(L){
 
 distribution="beta" 
 method="Stouffer"
-threshold=0.1
+threshold=0.01
 p<-10
-propI<-0.5
+propI<-0.7
 propObsvSample<-0.2
-totalSample<-10000
+totalSample<-1000
 
 IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
 G<-graph_from_adjacency_matrix(IS$gTrued)
 ID<-interventionalData(G,IS$L,IS$targetsI)
-ID
 C_list<-ID$Rs
 medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
-medianC<-wmeanCorrels(C_list,ID$Ns)$Rmean
 E<-get.edgelist(chowLiu(medianC))
+E
 CP<-triplets(E,C_list,threshold,distribution,method,ID$Ns)
 CP
 plot(G)
