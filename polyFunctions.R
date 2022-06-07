@@ -160,6 +160,7 @@ interventionalData<-function(G,L,interventionTargets){
   X<-samplingDAG(n,L)
   Rlist<-list(sample.cor(X)) # Initialize with an observational correlation matrix
   Llist<-list(L)
+  Xlist<-list(X)
   for(I in interventionTargets){
     nI<-I[1] # first element is the sample size
     tI<-I[-1] # remaining elements are the intervention targets
@@ -180,8 +181,9 @@ interventionalData<-function(G,L,interventionTargets){
     Rlist<-append(Rlist,RI)
     Llist<-append(Llist,list(LI))
     nList<-append(nList,nI)
+    Xlist<-append(Xlist,list(XI))
   }
-  RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList)
+  RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList,Xs=Xlist)
   return(RLlist)
 }
 
@@ -626,17 +628,53 @@ edgelist_toadjmatrix<-function(L){
   }
   return(I)
 }
+#--- Functions to orient edges using regression coefficients ------#
+
+# Environment matrix, Env:mat[i,j]=1 if the intervention j only affect E[i,1], 
+# Env_mat[i,j]=-1 if the intervention j only affect E[i,2], Env[i,j]=0 if none of
+# the nodes in edge i are targeted in intervention j, Env[i,j]=2 if both E[i,1]
+# and E[i,2] are targets in intervention j. In this case we can not use 
+# intervention j to test invariance of edge i.
+# Env_list is the list of edges orientable using the given interventions
+I_env<-function(E,interventionTargets){
+  n<-nrow(E)
+  l<-length(interventionTargets)
+  Env_mat<-matrix(0,n,l)  
+  Env_list<-c()
+  for(i in c(1:n)){
+    c<-FALSE
+    for(j in c(1:l)){
+      if(is.element(E[i,1],interventionTargets[[j]])&&is.element(E[i,2],interventionTargets[[j]])){
+        Env_mat[i,j]<-2
+        c<-TRUE
+      }
+      if(is.element(E[i,1],interventionTargets[[j]])&&!is.element(E[i,2],interventionTargets[[j]])){
+        Env_mat[i,j]<-1
+        c<-TRUE
+      }
+      if(!is.element(E[i,1],interventionTargets[[j]])&&is.element(E[i,2],interventionTargets[[j]])){
+        Env_mat[i,j]<--1
+        c<-TRUE
+      }
+    }
+    if(c==TRUE){
+      Env_list<-rbind(Env_list,c(i))
+    }
+  }
+  r_list<-list(Env_matrix=Env_mat,Env_list=Env_list)
+  return(r_list)
+}
 
 #----------
 #CPDAG computation example
 
 distribution="beta" 
 method="Stouffer"
-threshold=0.01
-p<-10
-propI<-0.7
+threshold=0.1
+p<-4
+propI<-0.4
 propObsvSample<-0.2
-totalSample<-1000
+totalSample<-5000
 
 IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
 G<-graph_from_adjacency_matrix(IS$gTrued)
@@ -644,14 +682,12 @@ ID<-interventionalData(G,IS$L,IS$targetsI)
 C_list<-ID$Rs
 medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
 E<-get.edgelist(chowLiu(medianC))
-E
 CP<-triplets(E,C_list,threshold,distribution,method,ID$Ns)
-CP
 plot(G)
 #------------
 C_list
 ID
 ID$Rs
-CP
-
+CP$Olist
+CP$Ulist
 

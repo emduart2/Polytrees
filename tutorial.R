@@ -289,4 +289,107 @@ plot(g)
 setwd("/Users/ElianaDuarte/Documents/gitHubRepos/Polytrees")
 source("Intervention_functions.R")
 source("polyFunctions.R")
+#-------
 
+distribution="beta" 
+method="Stouffer"
+threshold=0.1
+p<-4
+propI<-0.4
+propObsvSample<-0.2
+totalSample<-50
+
+IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
+G<-graph_from_adjacency_matrix(IS$gTrued)
+ID<-interventionalData(G,IS$L,IS$targetsI)
+C_list<-ID$Rs
+medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
+E<-get.edgelist(chowLiu(medianC))
+CP<-triplets(E,C_list,threshold,distribution,method,ID$Ns)
+plot(G)
+E
+#----- testEdge
+# e  = edge
+# Xe = n x 2 data matrix with the columns being the variables in e, we need to do this 
+#      for all interventional samples.
+# Ee = Environments that are relevant for e
+orientEdge<-function(e,Xe,Ee){
+  
+}
+
+#--- Start of code to orient edges with regression coefficients.
+IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
+G<-graph_from_adjacency_matrix(IS$gTrued)
+ID<-interventionalData(G,IS$L,IS$targetsI)
+C_list<-ID$Rs
+medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
+E<-get.edgelist(chowLiu(medianC))
+interTargets<-lapply(dropFirst(IS$targetsI),dropFirst) #This drops the size of the observational data set and the sizes of the interv. data sets
+E
+interTargets
+IE<-I_env(E,interTargets)
+orientEdge<-c()
+for (i in IE$Env_list){
+  e1<-E[i,1]
+  e2<-E[i,2]
+  for (k in (1:length(ID$Xs))){
+    Xe<-append(Xe,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+    e<-c(e1,e2)
+  }
+  orientEdge<-rbind(orientEdge,c(e1,e2))
+}
+orientEdge
+E
+#-----------------------------------------------------------------------
+
+
+is.element(E[1,1],interTargets[1])
+is.element(E[1,1],interTargets[[1]])
+E[1,1]
+c(1)
+c(1,2)
+interTargets[1]
+is.element(1,c(1,2))
+&&is.element(E[i,2],interventionTargets[j]))
+for (j in (1:nrow(E))){
+  e1<-E[j,1]
+  e2<-E[j,2]
+  
+  Xe<-list()
+  
+  #Retrieve the pieces of the data sets
+  for (k in (1:length(ID$Xs))){
+    Xe<-append(Xe,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+    e<-c(e1,e2)
+  }
+  orientations<-rbind(orientations, c(e1,e2))
+}
+interTargets
+Xe
+orientations
+E[2,1]
+E[2,2]
+length(Xes)
+Xe[[2]]
+ID$Xs[[2]]
+cbind(ID$Xs[[2]][,1],ID$Xs[[1]][,2])
+orientations
+rowappen
+
+
+E[1,2]
+length(ID$Xs)
+e1
+e2
+cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])
+x<-c(1,2,1)
+x[-1]
+drop(1,c(1,2,1))
+#----------------------------------
+#--- Auxiliary Functions.
+#-------
+dropFirst<-function(x){
+  x<-x[-1]
+  return(x)
+}
+#----------

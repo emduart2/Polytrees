@@ -220,21 +220,25 @@ I_env<-function(E,interventionTargets){
   n<-nrow(E)
   l<-length(interventionTargets)
   Env_mat<-matrix(0,n,l)  
-  Env_list<-list()
+  Env_list<-c()
   for(i in c(1:n)){
     c<-FALSE
     for(j in c(1:l)){
-      if(is.element(E[i,1],interventionTargets[j])&&!is.element(E[i,1],interventionTargets[j])){
+      if(is.element(E[i,1],interventionTargets[[j]])&&is.element(E[i,2],interventionTargets[[j]])){
+        Env_mat[i,j]<-2
+        c<-TRUE
+      }
+      if(is.element(E[i,1],interventionTargets[[j]])&&!is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<-1
         c<-TRUE
       }
-      if(!is.element(E[i,1],interventionTargets[j])&&is.element(E[i,1],interventionTargets[j])){
-        Env_mat[i,j]<-1
+      if(!is.element(E[i,1],interventionTargets[[j]])&&is.element(E[i,2],interventionTargets[[j]])){
+        Env_mat[i,j]<--1
         c<-TRUE
       }
     }
     if(c==TRUE){
-      Env_list<-append(Env_list,i)
+      Env_list<-cbind(Env_list,i)
     }
   }
   r_list<-list(Env_matrix=Env_mat,Env_list=Env_list)
