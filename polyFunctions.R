@@ -664,6 +664,128 @@ I_env<-function(E,interventionTargets){
   r_list<-list(Env_matrix=Env_mat,Env_list=Env_list)
   return(r_list)
 }
+#----
+#----- Edgewise orientations
+#-- pairs
+#-- This function orients a list of edges using:
+#   E= list of edges
+#   alpha = significance level for the test
+#   Xs = list of all data sets (observed and interventional)
+#   Is = list of intervention targets as in the outoput of the interventional setting function
+pairs<-function(E,alpha,Xs,IStargets){
+  interTargets<-lapply(dropFirst(IStargets),dropFirst)
+  IE<-I_env(E,interTargets)
+  O<-c()
+  U<-c()
+  for (i in IE$Env_list){
+    e1<-E[i,1]
+    e2<-E[i,2] # Initialize the lists below with the observational data set
+    Xe1e2<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e1->e2
+    Xe2e1<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e2->e1
+    for (k in c(2:length(ID$Xs))){
+      if (IE$Env_matrix[i,k-1]== 1 | IE$Env_matrix[i,k-1]==0){
+        Xe1e2<-append(Xe1e2,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+      }
+      if (IE$Env_matrix[i,k-1]== -1 | IE$Env_matrix[i,k-1]==0){
+        Xe2e1<-append(Xe2e1,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+      }
+    }
+    o1<- F_test(Xe1e2,alpha,FALSE) # FALSE is to test e1->e2---
+    o2<- F_test(Xe2e1,alpha,TRUE)  # This is to test the reverse/swap e2->e1
+    if (o1==1 && o2==0){
+      O<-rbind(O,c(e1,e2))
+    }
+    if (o1==0 && o2==1){
+      O<-rbind(O,c(e2,e1))
+    }
+    if(o1==o2){
+      U<-rbind(U,c(e1,e2))
+    }
+    #-- here we write the test for orienting the edges.
+  }
+  return(list(Olist=O,Ulist=U))
+}
+#---------------------------------------------------------------------
+# Auxiliary functions for the test of equality of regression coefficients
+#------- Drops the first element of a list
+dropFirst<-function(x){
+  x<-x[-1]
+  return(x)
+}
+#----------
+#---- GroupData
+# X = a list of data sets
+groupD<-function(X){
+  Xregroup<-c()
+  for (i in X){
+    Xregroup<-rbind(Xregroup,i)
+  }
+  return(Xregroup)
+}
+#--- regCoeff
+#-- Quick function to compute the regression coeff. Only works for vectors
+# for matrices we need to change to matrix multiplication and inverse of a matrix.
+# x= predictor variable y= response variable
+regCoeff<-function(x,y){
+  l<-1/sum(x*x)*sum(x*y)
+}
+#---------------
+
+#---- F_test
+# Xlist =  list of observational and interventinal data sets, each dataset consists of two
+#          columns. if swap = FALSE we test the the direction firstcolumn->secondcolum or e1->e2
+#          if swap = TRUE we test e2->e1
+#alpha = significance
+# 
+# b0  = pooled regression coeff
+# b1 = regression coeff of grouped data minus one intervention data set
+# b2 = regression coeff of the extracted intervention data set
+
+F_test<-function(Xlist,alpha,swap){
+  Xcombined<-groupD(Xlist)
+  N<-nrow(Xcombined)
+  n<-length(Xlist)
+  bfcorrection<-alpha/n
+  p_vals<-c()
+  if ( swap == FALSE){
+    b0<-regCoeff(Xcombined[,1],Xcombined[,2])
+    for (i in c(1:length(Xlist))){
+      XnotI<-groupD(Xlist[-i])
+      XI<-Xlist[[i]]
+      b1<-regCoeff(XnotI[,1],XnotI[,2])
+      b2<-regCoeff(XI[,1],XI[,2])
+      Q3<-sum((XnotI[,1]*b1-XnotI[,1]*b0)^2)+ sum((XI[,1]*b2-XI[,1]*b0)^2)
+      Q2<-sum((XnotI[,2]-XnotI[,1]*b1)^2)+sum((XI[,2]-XI[,1]*b2)^2)
+      Fstat<- (N-2)*Q3/Q2
+      p_val<-pf(Fstat,1,N-2)
+      if (p_val< bfcorrection){
+        return(0)
+      }
+    }
+    return(1)
+  }
+  if ( swap == TRUE){
+    b0<-regCoeff(Xcombined[,2],Xcombined[,1])
+    for (i in c(1:length(Xlist))){
+      XnotI<-groupD(Xlist[-i])
+      XI<-Xlist[[i]]
+      b1<-regCoeff(XnotI[,2],XnotI[,1])
+      b2<-regCoeff(XI[,2],XI[,1])
+      Q3<-sum((XnotI[,2]*b1-XnotI[,2]*b0)^2)+ sum((XI[,2]*b2-XI[,2]*b0)^2)
+      Q2<-sum((XnotI[,1]-XnotI[,2]*b1)^2)+sum((XI[,1]-XI[,2]*b2)^2)
+      Fstat<- (N-2)*Q3/Q2
+      p_val<-pf(Fstat,1,N-2)
+      if (p_val<bfcorrection){
+        return(0)
+      }
+    }
+    return(1)
+  }
+}
+#--------- end of F_test
+#----------------------------------
+#--- Auxiliary Functions.
+
 
 #----------
 #CPDAG computation example
@@ -685,9 +807,5 @@ E<-get.edgelist(chowLiu(medianC))
 CP<-triplets(E,C_list,threshold,distribution,method,ID$Ns)
 plot(G)
 #------------
-C_list
-ID
-ID$Rs
-CP$Olist
-CP$Ulist
+
 

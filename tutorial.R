@@ -295,9 +295,9 @@ distribution="beta"
 method="Stouffer"
 threshold=0.1
 p<-4
-propI<-0.4
+propI<-0.6
 propObsvSample<-0.2
-totalSample<-50
+totalSample<-50000
 
 IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
 G<-graph_from_adjacency_matrix(IS$gTrued)
@@ -307,24 +307,16 @@ medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
 E<-get.edgelist(chowLiu(medianC))
 CP<-triplets(E,C_list,threshold,distribution,method,ID$Ns)
 plot(G)
+CP$Olist
+CP$Ulist
 E
-#----- testEdge
-# e  = edge
-# Xe = n x 2 data matrix with the columns being the variables in e, we need to do this 
-#      for all interventional samples.
-# Ee = Environments that are relevant for e
-orientEdge<-function(e,Xe,Ee){
-  
-}
 
-#--- Start of code to orient edges with regression coefficients.
-distribution="beta" 
-method="Stouffer"
-threshold=0.1
+#--- CPDAG using regression coefficient examples to orient each edge separately
 p<-3
 propI<-0.4
-propObsvSample<-0.2
-totalSample<-50
+propObsvSample<-0.4
+totalSample<-10000
+alpha=0.1
 
 IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
 G<-graph_from_adjacency_matrix(IS$gTrued)
@@ -332,131 +324,8 @@ ID<-interventionalData(G,IS$L,IS$targetsI)
 C_list<-ID$Rs
 medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
 E<-get.edgelist(chowLiu(medianC))
-interTargets<-lapply(dropFirst(IS$targetsI),dropFirst) #This drops the size of the observational data set and the sizes of the interv. data sets
-E
-interTargets
-IE<-I_env(E,interTargets)
-alpha<- 0.05 #-- set a value for the significance
-orientEdge<-c()
-IE$Env_matrix
-interTargets
-ID$Xs
-for (i in IE$Env_list){
-  e1<-E[i,1]
-  e2<-E[i,2]                                          # Initialize the lists below with the observational data set
-  Xe1e2<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e1->e2
-  Xe2e1<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e2->e1
-  for (k in c(2:length(ID$Xs))){
-    if (IE$Env_matrix[i,k-1]== 1 | IE$Env_matrix[i,k-1]==0){
-    Xe1e2<-append(Xe1e2,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
-    }
-    if (IE$Env_matrix[i,k-1]== -1 | IE$Env_matrix[i,k-1]==0){
-    Xe2e1<-append(Xe2e1,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
-    }
-  }
-  print(c(length(Xe1e2),length(Xe2e1)))
-  #-- here we write the test for orienting the edges.
-  orientEdge<-rbind(orientEdge,c(e1,e2))
-}
-E
-IE$Env_matrix
-ID$Ns
-m1<-lm(Xe1e2[[1]][,2]~Xe1e2[[1]][,1])
-m1$coefficients[2]
-summary(m1)
-length(Xe2e1)
-length(Xe)
-c(2:length(ID$Xs))
-i=2
-m1<-lm(Xe[[1]][,2]~Xe[[1]][,1])
-m1$coefficients
-1/sum(Xe[[1]][,1]*Xe[[1]][,1])*sum(Xe[[1]][,1]*Xe[[1]][,2])
 
-mean(ID$Xs[[2]][,1])
-IE$Env_matrix[1,2]
-orientEdge
-
-E
-#-----------------------------------------------------------------------
-edge_o<-function(Xlist,alpha,swap){
-  lambdaElist<-c()
-  lambdaElistlm<-c()
-  if ( swap == FALSE){
-    for (i in c(1:length(Xlist))){
-        x<-Xlist[[i]][,1]
-        y<-Xlist[[i]][,2]
-        l<-1/sum(x*x)*sum(x*y)
-        m<-lm(y~x)
-        lambdaElist<-cbind(lambdaElist,c(l))
-        lambdaElistlm<-cbind(lambdaElistlm,c(m$coefficients[2]))
-    }
-  }
-  if ( swap == TRUE){
-    for (i in c(1:length(Xlist))){
-      x<-Xlist[[i]][,2]
-      y<-Xlist[[i]][,1]
-      l<-1/sum(x*x)*sum(x*y)
-      m<-lm(y~x)
-      lambdaElist<-cbind(lambdaElist,c(l))
-      lambdaElistlm<-cbind(lambdaElistlm,c(m$coefficients[2]))
-    }
-  }
-  l1<-mean(lambdaElist)
-  l2<-mean(lambdaElistlm)
-  return(list(lambdaElist,l1,lambdaElistlm,l2))
-}
-edge_o(Xe1e2,0.05, FALSE)
-edge_o(Xe2e1,0.05,TRUE)
-IS$L
-E
+CP<-pairs(E,alpha,ID$Xs,IS$targetsI)
+CP$Olist
+CP$Ulist
 plot(G)
-?transpose
-is.element(E[1,1],interTargets[1])
-is.element(E[1,1],interTargets[[1]])
-E[1,1]
-c(1)
-c(1,2)
-interTargets[1]
-
-for (j in (1:nrow(E))){
-  e1<-E[j,1]
-  e2<-E[j,2]
-  
-  Xe<-list()
-  
-  #Retrieve the pieces of the data sets
-  for (k in (1:length(ID$Xs))){
-    Xe<-append(Xe,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
-    e<-c(e1,e2)
-  }
-  orientations<-rbind(orientations, c(e1,e2))
-}
-interTargets
-Xe
-orientations
-E[2,1]
-E[2,2]
-length(Xes)
-Xe[[2]]
-ID$Xs[[2]]
-cbind(ID$Xs[[2]][,1],ID$Xs[[1]][,2])
-orientations
-rowappen
-
-
-E[1,2]
-length(ID$Xs)
-e1
-e2
-cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])
-x<-c(1,2,1)
-x[-1]
-drop(1,c(1,2,1))
-#----------------------------------
-#--- Auxiliary Functions.
-#-------
-dropFirst<-function(x){
-  x<-x[-1]
-  return(x)
-}
-#----------
