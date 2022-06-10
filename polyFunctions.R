@@ -563,8 +563,8 @@ z_test<-function(S,N,i,k){
   p_val<-numeric()
   for(c in c(1:length(S))){
     rho<-S[[c]][i,k]
-    z<-sqrt(N[c]-3)*FisherZ(rho)
-    p_val[c]<-pnorm(z,lower.tail = FALSE)
+    z<-(sqrt(N[c]-3)*FisherZ(rho))^2
+    p_val[c]<-pchisq(z,df=1,lower.tail = FALSE)
   }
   return(p_val)
 }
