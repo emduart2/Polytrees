@@ -247,7 +247,7 @@ wmeanCorrels<-function(corrIs,nIs){
 # true graph and the one learned by Chow-Liu. 
 # Three learning algorithms are considered here using
 # Chow-Liu with three different weight matrices, using
-# an observed correlation matrix, an weighted median and a weighted mean
+# an observed correlation matrix, a weighted median and a weighted mean
 # the ONE in the name refers to the fact that this function does the
 # learning for one instance of a dag a coefficient matrix and a set of
 # intervention targets.
@@ -731,7 +731,7 @@ regCoeff<-function(x,y){
 }
 #---------------
 
-#---- F_test
+#---- F_test -- Based on Chow's test 1960
 # Xlist =  list of observational and interventinal data sets, each dataset consists of two
 #          columns. if swap = FALSE we test the the direction firstcolumn->secondcolum or e1->e2
 #          if swap = TRUE we test e2->e1
@@ -784,7 +784,7 @@ F_test<-function(Xlist,alpha,swap){
 }
 #--------- end of F_test
 #----------------------------------
-#--- Auxiliary Functions.
+
 
 
 #----------
