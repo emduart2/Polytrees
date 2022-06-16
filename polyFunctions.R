@@ -563,8 +563,8 @@ z_test<-function(S,N,i,k){
   p_val<-numeric()
   for(c in c(1:length(S))){
     rho<-S[[c]][i,k]
-    z<-sqrt(N[c]-3)*FisherZ(rho)
-    p_val[c]<-pnorm(z,lower.tail = FALSE)
+    z<-(sqrt(N[c]-3)*FisherZ(rho))^2
+    p_val[c]<-pchisq(z,df=1,lower.tail = FALSE)
   }
   return(p_val)
 }
@@ -668,40 +668,42 @@ I_env<-function(E,interventionTargets){
 #----- Edgewise orientations
 #-- pairs
 #-- This function orients a list of edges using:
-#   E= list of edges
+#   E= list of unoriented edges
+#   O= list of already oriented edges 
 #   alpha = significance level for the test
 #   Xs = list of all data sets (observed and interventional)
 #   Is = list of intervention targets as in the outoput of the interventional setting function
-pairs<-function(E,alpha,Xs,IStargets){
-  interTargets<-lapply(dropFirst(IStargets),dropFirst)
-  IE<-I_env(E,interTargets)
-  O<-c()
+pairs<-function(E,O,alpha,Xs,IStargets){
   U<-c()
-  for (i in IE$Env_list){
-    e1<-E[i,1]
-    e2<-E[i,2] # Initialize the lists below with the observational data set
-    Xe1e2<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e1->e2
-    Xe2e1<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e2->e1
-    for (k in c(2:length(ID$Xs))){
-      if (IE$Env_matrix[i,k-1]== 1 | IE$Env_matrix[i,k-1]==0){
-        Xe1e2<-append(Xe1e2,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+  if(length(E)!=0){
+    interTargets<-lapply(dropFirst(IStargets),dropFirst)
+    IE<-I_env(E,interTargets)
+    for (i in IE$Env_list){
+      e1<-E[i,1]
+      e2<-E[i,2] # Initialize the lists below with the observational data set
+      Xe1e2<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e1->e2
+      Xe2e1<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e2->e1
+      for (k in c(2:length(ID$Xs))){
+        if (IE$Env_matrix[i,k-1]== 1 | IE$Env_matrix[i,k-1]==0){
+          Xe1e2<-append(Xe1e2,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+        }
+        if (IE$Env_matrix[i,k-1]== -1 | IE$Env_matrix[i,k-1]==0){
+          Xe2e1<-append(Xe2e1,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+        }
       }
-      if (IE$Env_matrix[i,k-1]== -1 | IE$Env_matrix[i,k-1]==0){
-        Xe2e1<-append(Xe2e1,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+      o1<- F_test(Xe1e2,alpha,FALSE) # FALSE is to test e1->e2---
+      o2<- F_test(Xe2e1,alpha,TRUE)  # This is to test the reverse/swap e2->e1
+      if (o1==1 && o2==0){
+        O<-rbind(O,c(e1,e2))
       }
+      if (o1==0 && o2==1){
+        O<-rbind(O,c(e2,e1))
+      }
+      if(o1==o2){
+        U<-rbind(U,c(e1,e2))
+      }
+      #-- here we write the test for orienting the edges.
     }
-    o1<- F_test(Xe1e2,alpha,FALSE) # FALSE is to test e1->e2---
-    o2<- F_test(Xe2e1,alpha,TRUE)  # This is to test the reverse/swap e2->e1
-    if (o1==1 && o2==0){
-      O<-rbind(O,c(e1,e2))
-    }
-    if (o1==0 && o2==1){
-      O<-rbind(O,c(e2,e1))
-    }
-    if(o1==o2){
-      U<-rbind(U,c(e1,e2))
-    }
-    #-- here we write the test for orienting the edges.
   }
   return(list(Olist=O,Ulist=U))
 }
@@ -784,28 +786,31 @@ F_test<-function(Xlist,alpha,swap){
 }
 #--------- end of F_test
 #----------------------------------
+<<<<<<< HEAD
 
+=======
+##Takes as imput the the lists of oriented/unoriented edges and the size of the tree
+#gives as output the adjacency matrix of the cpdag
+cpdag_from_lists<-function(Olist,Ulist,p){
+  A<-Matrix(matrix(0,p,p),sparse=TRUE)
+  o_n<-length(Olist)/2
+  u_n<-length(Ulist)/2
+  if(o_n>0){
+    Olist<-matrix(Olist,nrow=o_n)
+    for(i in c(1:o_n)){
+      A[Olist[i,1],Olist[i,2]]<-1
+    }
+  }
+  if(u_n>0){
+    Ulist<-matrix(Ulist,nrow=u_n)
+    for(i in c(1:u_n)){
+      A[Ulist[i,1],Ulist[i,2]]<-A[Ulist[i,2],Ulist[i,1]]<-1
+    }
+  }
+  return(A)
+}
+#--- Auxiliary Functions.
+>>>>>>> 933b27e4e6cf90e43295c9b9fb920689a88d7e6e
 
-
-#----------
-#CPDAG computation example
-
-distribution="beta" 
-method="Stouffer"
-threshold=0.1
-p<-4
-propI<-0.4
-propObsvSample<-0.2
-totalSample<-5000
-
-IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
-G<-graph_from_adjacency_matrix(IS$gTrued)
-ID<-interventionalData(G,IS$L,IS$targetsI)
-C_list<-ID$Rs
-medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
-E<-get.edgelist(chowLiu(medianC))
-CP<-triplets(E,C_list,threshold,distribution,method,ID$Ns)
-plot(G)
-#------------
 
 
