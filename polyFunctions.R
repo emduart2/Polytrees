@@ -786,9 +786,9 @@ F_test<-function(Xlist,alpha,swap){
 }
 #--------- end of F_test
 #----------------------------------
-<<<<<<< HEAD
+##<<<<<<< HEAD
 
-=======
+##=======
 ##Takes as imput the the lists of oriented/unoriented edges and the size of the tree
 #gives as output the adjacency matrix of the cpdag
 cpdag_from_lists<-function(Olist,Ulist,p){
@@ -810,7 +810,7 @@ cpdag_from_lists<-function(Olist,Ulist,p){
   return(A)
 }
 #--- Auxiliary Functions.
->>>>>>> 933b27e4e6cf90e43295c9b9fb920689a88d7e6e
+#>>>>>>> 933b27e4e6cf90e43295c9b9fb920689a88d7e6e
 
 
 
