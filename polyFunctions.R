@@ -24,6 +24,7 @@
 # install.packages("poolr")
 # install.packages("harmonicmeanp")
 # install.packages("DescTools")
+# install.packages("graph")
 library(BNSL)
 library(bnlearn)
 library(igraph)
@@ -40,6 +41,7 @@ library(poolr)
 library(harmonicmeanp)
 library(DescTools)
 library(Matrix)
+library(graph)
 #-------------------------
 
 # Function for calculating sample covariance matrix
@@ -809,8 +811,3 @@ cpdag_from_lists<-function(Olist,Ulist,p){
   }
   return(A)
 }
-#--- Auxiliary Functions.
-#>>>>>>> 933b27e4e6cf90e43295c9b9fb920689a88d7e6e
-
-
-
