@@ -120,7 +120,8 @@ samplingDAG<-function(n,Lambda){
   }
   Xmat<-matrix(0,n,p)
   Id<-diag(rep(1,p))
-  Lambda <- Lambda+Id
+  #Lambda <- Lambda+Id
+  Lambda<-solve(Id-Lambda)
   for( j in (1:p)){
     for(i in (1:p)){
       Xmat[,j]<- Xmat[,j]+Lambda[i,j]*eps[,i] 
@@ -292,6 +293,50 @@ interventionalSetting<-function(p,proprI,propObsSample,totalSample){
   interventionTargets<- list(nObsv)
   for(i in tI){
     interventionTargets<-append(interventionTargets,list(c(nInterv,i)))
+  }
+  return(list(gTrued= g$Directed, gTrues=g$Skeleton, L=lambdaCoeffs, targetsI=interventionTargets))
+}
+
+
+# The next function does simulations with single node interventions
+# This function generates a DAG, a list of intervention targets 
+# with corresponding sample sizes and a matrix L of coefficients
+# INPUT: p = number of nodes in the dag
+#
+#        ndatasets= number of settings
+#
+#        interventionsize= either an integer between 1 and p-1 or a vector of length ndatasets containing the 
+#        the number of intervened nodes in that specific datasets. If interventionsize is an integer
+#        1 observentional setting and (ndatasets-1) interventional settings are with interventionsize
+#        randomly chosen intervention nodes each are created
+#
+#        sdatasets= either c() or a vector of length ndatasets containing the sample sizes for each setting.
+#        If sdatasets==c(), the first setting gets (totalsample%/%ndatasets+totalsample%%ndatasets) samples
+#        while the others get totalsample%/%ndatasets samples.
+#
+#        totalSample = sum of the sample sizes of all interventional and obsv. experiments, to be specified
+#        only if sdatasets=c().
+#
+##       If interventionsize==1 and sdatasets==c(), then you get the same output of "interventionalSetting" 
+##       where proprI=totalsample/ndatsets
+isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample){
+  g<-pruferwithskeleton(p)
+  lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
+  
+  if(length(sdatasets)==0){
+    s<-sdatasets
+    sdatasets<-0*c(1:ndatasets)+totalsample%/%ndatasets
+    sdatasets[1]<-sdatasets[1]+totalsample%%ndatasets
+  }
+  if(length(interventionsize)==1){
+    s<-interventionsize
+    interventionsize<-0*c(1:ndatasets)+interventionsize
+    interventionsize[1]<-0
+  }
+  interventionTargets<-list()
+  for(i in c(1:ndatasets)){
+    I<-sample(p,interventionsize[i],replace=FALSE)
+    interventionTargets<-append(interventionTargets,list(c(sdatasets[i],I)))
   }
   return(list(gTrued= g$Directed, gTrues=g$Skeleton, L=lambdaCoeffs, targetsI=interventionTargets))
 }
