@@ -715,8 +715,8 @@ I_env<-function(E,interventionTargets){
 #----- Edgewise orientations
 #-- pairs
 #-- This function orients a list of edges using:
-#   E= list of unoriented edges
-#   O= list of already oriented edges 
+#   E= matrix of unoriented edges
+#   O= matrix of already oriented edges 
 #   alpha = significance level for the test
 #   Xs = list of all data sets (observed and interventional)
 #   Is = list of intervention targets as in the outoput of the interventional setting function
@@ -738,6 +738,7 @@ pairs<-function(E,O,alpha,Xs,IStargets){
           Xe2e1<-append(Xe2e1,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
         }
       }
+      #-- here we write the test for orienting the edges.
       o1<- F_test(Xe1e2,alpha,FALSE) # FALSE is to test e1->e2---
       o2<- F_test(Xe2e1,alpha,TRUE)  # This is to test the reverse/swap e2->e1
       if (o1==1 && o2==0){
@@ -749,7 +750,7 @@ pairs<-function(E,O,alpha,Xs,IStargets){
       if(o1==o2){
         U<-rbind(U,c(e1,e2))
       }
-      #-- here we write the test for orienting the edges.
+      
     }
   }
   return(list(Olist=O,Ulist=U))

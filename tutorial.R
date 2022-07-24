@@ -297,7 +297,7 @@ threshold=0.1
 p<-4
 propI<-0.6
 propObsvSample<-0.2
-totalSample<-50000
+totalSample<-500
 
 IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
 G<-graph_from_adjacency_matrix(IS$gTrued)
@@ -308,24 +308,28 @@ E<-get.edgelist(chowLiu(medianC))
 CP<-triplets(E,C_list,threshold,distribution,method,ID$Ns)
 plot(G)
 CP$Olist
-CP$Ulist
+E<-matrix(c(2,4),nc=2,byrow = TRUE)
+pairs(E,CP$Olist,alpha,ID$Xs,IS$targetsI)
+
 E
 
 #--- CPDAG using regression coefficient examples to orient each edge separately
 p<-3
 propI<-0.4
 propObsvSample<-0.4
-totalSample<-10000
-alpha=0.1
+totalSample<-5000
+alpha<-0.1
 
 IS<-interventionalSetting(p,propI,propObsvSample,totalSample)
+IS
 G<-graph_from_adjacency_matrix(IS$gTrued)
 ID<-interventionalData(G,IS$L,IS$targetsI)
 C_list<-ID$Rs
 medianC<-wmedianCorrels(C_list,ID$Ns)$Rmedian
 E<-get.edgelist(chowLiu(medianC))
-
-CP<-pairs(E,alpha,ID$Xs,IS$targetsI)
+E
+O<-c()
+CP<-pairs(E,O,alpha,ID$Xs,IS$targetsI)
 CP$Olist
 CP$Ulist
 plot(G)
