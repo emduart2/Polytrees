@@ -723,19 +723,19 @@ I_env<-function(E,interventionTargets){
 pairs<-function(E,O,alpha,Xs,IStargets){
   U<-c()
   if(length(E)!=0){
-    interTargets<-lapply(dropFirst(IStargets),dropFirst)
+    interTargets<-lapply(dropFirst(IStargets),dropFirst) # This removes the sample size of each interventional exp
     IE<-I_env(E,interTargets)
     for (i in IE$Env_list){
       e1<-E[i,1]
       e2<-E[i,2] # Initialize the lists below with the observational data set
-      Xe1e2<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e1->e2
-      Xe2e1<-list(cbind(ID$Xs[[1]][,e1],ID$Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e2->e1
-      for (k in c(2:length(ID$Xs))){
+      Xe1e2<-list(cbind(Xs[[1]][,e1],Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e1->e2
+      Xe2e1<-list(cbind(Xs[[1]][,e1],Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e2->e1
+      for (k in c(2:length(Xs))){
         if (IE$Env_matrix[i,k-1]== 1 | IE$Env_matrix[i,k-1]==0){
-          Xe1e2<-append(Xe1e2,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+          Xe1e2<-append(Xe1e2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))
         }
         if (IE$Env_matrix[i,k-1]== -1 | IE$Env_matrix[i,k-1]==0){
-          Xe2e1<-append(Xe2e1,list(cbind(ID$Xs[[k]][,e1],ID$Xs[[k]][,e2])))
+          Xe2e1<-append(Xe2e1,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))
         }
       }
       #-- here we write the test for orienting the edges.
@@ -765,6 +765,7 @@ dropFirst<-function(x){
 #----------
 #---- GroupData
 # X = a list of data sets
+# This makes one single data set from all the X's
 groupD<-function(X){
   Xregroup<-c()
   for (i in X){
@@ -798,16 +799,17 @@ F_test<-function(Xlist,alpha,swap){
   bfcorrection<-alpha/n
   p_vals<-c()
   if ( swap == FALSE){
-    b0<-regCoeff(Xcombined[,1],Xcombined[,2])
+    b0<-regCoeff(Xcombined[,1],Xcombined[,2]) # Regression coefficients of all data combined
     for (i in c(1:length(Xlist))){
-      XnotI<-groupD(Xlist[-i])
-      XI<-Xlist[[i]]
+      XnotI<-groupD(Xlist[-i]) # data set that doesnt have the sample I
+      XI<-Xlist[[i]] # data set for the sample I
       b1<-regCoeff(XnotI[,1],XnotI[,2])
       b2<-regCoeff(XI[,1],XI[,2])
       Q3<-sum((XnotI[,1]*b1-XnotI[,1]*b0)^2)+ sum((XI[,1]*b2-XI[,1]*b0)^2)
       Q2<-sum((XnotI[,2]-XnotI[,1]*b1)^2)+sum((XI[,2]-XI[,1]*b2)^2)
       Fstat<- (N-2)*Q3/Q2
       p_val<-pf(Fstat,1,N-2)
+      p_vals<rbind(p_vals,c(p_val))
       if (p_val< bfcorrection){
         return(0)
       }

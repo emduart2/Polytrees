@@ -314,7 +314,7 @@ pairs(E,CP$Olist,alpha,ID$Xs,IS$targetsI)
 E
 
 #--- CPDAG using regression coefficient examples to orient each edge separately
-p<-3
+p<-6
 propI<-0.4
 propObsvSample<-0.4
 totalSample<-5000
@@ -333,3 +333,6 @@ CP<-pairs(E,O,alpha,ID$Xs,IS$targetsI)
 CP$Olist
 CP$Ulist
 plot(G)
+interTargets<-lapply(dropFirst(IS$targetsI),dropFirst)
+interTargets
+
