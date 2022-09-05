@@ -365,14 +365,11 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample){
 #-----------
 #Functions to learn the CPDAG
 
-#takes as input a list of unoriented edges, a list of correlation matrices, threshold
-#the distribution to use for to compute the p-values, the method to combine them
-#a vector of sample sizes N
-#beta computes the p_values individually using the squared of the correlations and then combine them with one of the methods
-#chi_2_p computes the p_values individually using the (squared) z-transformation and then combine them with one of the methods
-#chi_2_test perfoms sums all the (squared) z-transformations of the correlations and then perform a chi-squared test
+#takes as input a list of unoriented edges, a list of correlation matrices, a matrix of dependence scores
+#a threshold
 #gives as output two lists of oriented/unoriented  edges
-triplets<-function(E,S,thres,distribution=c("beta","chi_2_p","chi_2_test"),method=c("Fisher","Harmonic","Stouffer"),N){
+
+triplets<-function(E,S,C,thres){
   m<-(nrow(E)+1)
   V_v<-c(1:(m+1))  #list of vertices to "check" i.e possible colliders
   UE<-E
@@ -410,14 +407,14 @@ triplets<-function(E,S,thres,distribution=c("beta","chi_2_p","chi_2_test"),metho
       }
       if((length(Li)>0)&(l>0)){   #if there are edges pointing towards v, and unoriented edges containig v orient the unoriented edges.
         e<-O[Li[1],]  
-        O<-withincoming(S,e,v,Lu1,Lu2,O,UE,thres,distribution,method,N)   #updated list of oriented edges
+        O<-withincoming(S,C,e,v,Lu1,Lu2,O,UE,thres)   #updated list of oriented edges
         vcheck<-append(vcheck,i)
         update<-TRUE
         vupdate<-TRUE
       }
       else{
         if(l>1){                  #if there is more than 1 unoriented edge containing v, check if v is a collider.
-          d<-onlyundirected(S,UE,Lu1,Lu2,thres,distribution,method,N)   #d[i,j]=1 if the two edges i,j forms a collider with v as center
+          d<-onlyundirected(S,C,UE,Lu1,Lu2,thres)   #d[i,j]=1 if the two edges i,j forms a collider with v as center
           col<-which(d==1)       #position of the colliders 
           if(length(col)>0){
             a<-col[1]%%l         #position of the first collider
@@ -462,75 +459,52 @@ triplets<-function(E,S,thres,distribution=c("beta","chi_2_p","chi_2_test"),metho
   }
 }
 
+
+
+
+
+
+
 ##AUXILIARY FUNCTIONS USED IN TRIPLETS
 #return 1 if j is a collider and 0 otherwise
-tripletcomp<-function(S,i,j,k,thres,distribution,method,N){
-  if(distribution=="beta"){
-    p_val<-beta_test(S,N,i,k)
-    if(method=="Fisher"){
-      p<-fisher(p_val)$p
+simpleitest<-function(S,C,i,j,k,thres){
+    if(abs(C[i,k])<thres){
+      r<-1
     }
-    if(method=="Harmonic"){
-      p<-hmp.stat(p_val,N/sum(N))
+    else{
+      r<-0
     }
-    if(method=="Stouffer"){
-      st<-sqrt(N/sum(N))%*%qnorm(p_val)
-      p<-pnorm(st,lower.tail = FALSE)
-    }
-  }
-  
-  if(distribution=="chi_2_p"){
-    p_val<-z_test(S,N,i,k)
-    if(method=="Fisher"){
-      p<-fisher(p_val)$p
-    }
-    if(method=="Harmonic"){
-      p<-hmp.stat(p_val,N/sum(N))
-    }
-    if(method=="Stouffer"){
-      st<-sqrt(N/sum(N))%*%qnorm(p_val)
-      p<-pnorm(st,lower.tail = FALSE)
-    }
-  }
-  if(distribution=="chi_2_test"){
-    st<-0
-    for(c in c(1:length(S))){
-      rho<-S[[c]][i,k]
-      st<-st+(sqrt(N[c]-3)*FisherZ(rho))^2
-    }
-    p<-pchisq(st,df=length(S),lower.tail = FALSE)
-  }
-  if(p<thres){
-    r<-0
-  }
-  else{
-    r<-1
-  }
   return(r)
 }
 
-#takes as input a list the correlation matrix, an oriented edge, a vertex v, the two lists of edges containing v, 
+#Performs the likelihood test in 5.2 
+#To be implemented
+tripetlikelihood<-function(S,C,i,j,k,thres){
+
+}
+
+#takes as input a list the correlation matrix, an oriented edge, a vertex v, the wo lists of edges containing v, 
 #the lists of oriented/unoriented edges and a threshold
 #gives as output the updated list of oriented edges
-withincoming<-function(S,e,v,Lu1,Lu2,O,UE,thres,distribution,method,N){
+withincoming<-function(S,C,e,v,Lu1,Lu2,O,UE,thres){
   d<-matrix(0,nrow = length(Lu1)+length(Lu2),ncol=1) 
   if(length(Lu1)>0){
     for(j in c(1:length(Lu1))){
       if(length(UE)>2){
-        d[j]<-tripletcomp(S,e[1],v,UE[Lu1[j],2],thres,distribution,method,N)
+        d[j]<-tripetlikelihood(S,C,e[1],v,UE[Lu1[j],2],thres)
       }
       else{
-        d[j]<-tripletcomp(S,e[1],v,UE[2],thres,distribution,method,N)
+        d[j]<-tripetlikelihood(S,C,e[1],v,UE[2],thres)
       }
     }
   }
   if(length(Lu2)>0){
     for(j in c(1:length(Lu2))){
       if(length(UE)>2){
-        d[length(Lu1)+j]<-tripletcomp(S,e[1],v,UE[Lu2[j],1],thres,distribution,method,N)
+        d[length(Lu1)+j]<-tripetlikelihood(S,C,e[1],v,UE[Lu2[j],1],thres)
       }
       else{
-        d[length(Lu1)+j]<-tripletcomp(S,e[1],v,UE[1],thres,distribution,method,N)
+        d[length(Lu1)+j]<-tripetlikelihood(S,C,e[1],v,UE[1],thres)
       }
     }
   }
@@ -540,7 +514,7 @@ withincoming<-function(S,e,v,Lu1,Lu2,O,UE,thres,distribution,method,N){
 
 #takes as input a correlation matrix, a list of undirected egdes, the two lists of edges having v as 1st or 2nd vertex and a threshold
 #gives as output a matrix d, with d[i,j]=1 if the two edges i,j forms a collider with v as center
-onlyundirected<-function(S,UE,Lu1,Lu2,thres,distribution,method,N){
+onlyundirected<-function(S,C,UE,Lu1,Lu2,thres){
   L<-append(Lu1,Lu2)
   l<-length(L)
   d<-matrix(0,nrow =l,ncol=l)
@@ -558,7 +532,7 @@ onlyundirected<-function(S,UE,Lu1,Lu2,thres,distribution,method,N){
       else{
         count_j<-1
       }
-      d[i,j]<-tripletcomp(S,UE[L[i],count_i],v,UE[L[j],count_j],thres,distribution,method,N)
+      d[i,j]<-simpleitest(S,C,UE[L[i],count_i],v,UE[L[j],count_j],thres)
     }
   }
   return(d)
