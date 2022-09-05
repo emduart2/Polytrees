@@ -190,6 +190,26 @@ interventionalData<-function(G,L,interventionTargets){
   return(RLlist)
 }
 
+#Imatrix
+# INPUT: corrsIs = Ordered List of observed correlation matrices
+#                 associated to the interventional experiments
+#        nIs = Ordeded List of sample sizes associated to each
+#              interventional experiment.
+# OUTPUT: C=a matrix, each entry of the matrix is the mutual information between the two variables
+Imatrix<-function(C_list,Ns){
+  p<-dim(C_list[[1]])[1]
+  C<-matrix(0,nrow=p,ncol=p)
+  for(i in c(1:(p-1))){
+    for(j in c((i+1):p)){
+      for(k in c(1:length(Ns))){
+        C[i,j]<-C[i,j]-(Ns[k]/2)*log(1-C_list[[k]][i,j]^2)
+      }
+    }
+  }
+  C<-C+t(C)
+  return(C)
+}
+
 
 #-wmedianCorrels
 # INPUT: corrsIs = Ordered List of observed correlation matrices
