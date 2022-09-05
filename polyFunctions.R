@@ -298,7 +298,7 @@ interventionalSetting<-function(p,proprI,propObsSample,totalSample){
 }
 
 
-# The next function does simulations with single node interventions
+# The next function does simulations with multiple node interventions
 # This function generates a DAG, a list of intervention targets 
 # with corresponding sample sizes and a matrix L of coefficients
 # INPUT: p = number of nodes in the dag
