@@ -671,7 +671,7 @@ edgelist_toadjmatrix<-function(L){
 }
 #--- Functions to orient edges using regression coefficients ------#
 
-# Environment matrix, Env:mat[i,j]=1 if the intervention j only affect E[i,1], 
+# Environment matrix, Env_mat[i,j]=1 if the intervention j only affect E[i,1], 
 # Env_mat[i,j]=-1 if the intervention j only affect E[i,2], Env[i,j]=0 if none of
 # the nodes in edge i are targeted in intervention j, Env[i,j]=2 if both E[i,1]
 # and E[i,2] are targets in intervention j. In this case we can not use 
@@ -853,3 +853,4 @@ cpdag_from_lists<-function(Olist,Ulist,p){
   }
   return(A)
 }
+
