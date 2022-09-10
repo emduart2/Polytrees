@@ -687,7 +687,7 @@ I_env<-function(E,interventionTargets){
     for(j in c(1:l)){
       if(is.element(E[i,1],interventionTargets[[j]])&&is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<-2
-        c<-TRUE
+        c<-FALSE
       }
       if(is.element(E[i,1],interventionTargets[[j]])&&!is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<-1
