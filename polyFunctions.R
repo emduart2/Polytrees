@@ -228,7 +228,7 @@ wmedianCorrels<-function(corrIs,nIs){
   p<-nrow(corrIs[[1]])
   k<-length(nIs)
   probs<- 1/sum(nIs)*nIs
-  threewayT<-array(unlist(corrIs),c(p,p,k))
+  threewayT<-array(abs(unlist(corrIs)),c(p,p,k))
   Rmedian<-apply(threewayT,1:2,weighted.median,probs)
   return(list(Rmedian=Rmedian,probs=probs))
 }
@@ -254,7 +254,7 @@ wmeanCorrels<-function(corrIs,nIs){
   p<-nrow(corrIs[[1]])
   k<-length(nIs)
   probs<- 1/sum(nIs)*nIs
-  threewayT<-array(unlist(corrIs),c(p,p,k)) # this one had a mistake, now it is fixed
+  threewayT<-array(abs(unlist(corrIs)),c(p,p,k)) # this one had a mistake, now it is fixed
   Rmean<-apply(threewayT,1:2,weighted.mean,probs) # then we take the mean of that
   return(list(Rmean=Rmean,probs=probs))
 }
