@@ -688,7 +688,7 @@ I_env<-function(E,interventionTargets){
     for(j in c(1:l)){
       if(is.element(E[i,1],interventionTargets[[j]])&&is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<-2
-        c<-FALSE
+        c<-TRUE
       }
       if(is.element(E[i,1],interventionTargets[[j]])&&!is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<-1
@@ -773,7 +773,14 @@ groupD<-function(X){
 # for matrices we need to change to matrix multiplication and inverse of a matrix.
 # x= predictor variable y= response variable
 regCoeff<-function(x,y){
-  l<-1/sum(x*x)*sum(x*y)
+  xbar<-mean(x)
+  ybar<-mean(y)
+  sxx<-sum((x-xbar)^2)
+  syy<-sum((y-ybar)^2)
+  sxy<-sum((x-xbar)*(y-ybar))
+  b<-(1/sxx)*sxy
+  a<-ybar-b*xbar
+  return(c(a,b))
 }
 #---------------
 
