@@ -154,7 +154,8 @@ chowLiu<-function(R){
 #       List2= This is a list of coefficient matrices with the values
 #              of the intervened coefficients
 #       List3= This is a list of the sample size of each intervention
-# 
+#       List4= The complete data set for all interventional experiments.      
+#
 interventionalData<-function(G,L,interventionTargets){
   p<-nrow(L)
   n<-interventionTargets[[1]]
