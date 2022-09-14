@@ -671,7 +671,8 @@ edgelist_toadjmatrix<-function(L){
   return(I)
 }
 #--- Functions to orient edges using regression coefficients ------#
-
+# E = list of edges
+# interventionTargets = list of interventional settings
 # Environment matrix, Env_mat[i,j]=1 if the intervention j only affect E[i,1], 
 # Env_mat[i,j]=-1 if the intervention j only affect E[i,2], Env[i,j]=0 if none of
 # the nodes in edge i are targeted in intervention j, Env[i,j]=2 if both E[i,1]
