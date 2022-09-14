@@ -33,8 +33,6 @@ n_poly<-function(Xlist,Ilist,Nlist,u,v){
     derpolys[[i]]<-deriv(polys[[i]],"l")
   }
   
-  print(polys)
-  print(derpolys)
   llike<-function(l){
     ll<-0
     derll<-0
@@ -53,7 +51,6 @@ n_poly<-function(Xlist,Ilist,Nlist,u,v){
     return(derll)
   }
 
-  plot(c(-500:500)/500,llike(c(-500:500)/500),type="l")
   maxloglik<-optim(0,method="Brent",llike,derllike,lower=-1,upper=1)$value
   
   if(length(vlist)>0){
