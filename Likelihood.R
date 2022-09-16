@@ -178,8 +178,6 @@ tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,z){
   }
   
   
-  NN<-sum(Nlist[notvlist[]])
-  MLAMBDA<-0
   
   polys<-list()
   derpolys<-list()
@@ -188,7 +186,6 @@ tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,z){
     b<-(Xlist[[notvlist[i]]][,u]%*%Xlist[[notvlist[i]]][,v])
     c<-(Xlist[[notvlist[i]]][,v]%*%Xlist[[notvlist[i]]][,v])
     
-    MLAMBDA<-MLAMBDA+(Nlist[notvlist[i]]/NN)*(b/a)
     polys[[i]]<-mp(paste0(a," l l-",2*b," l+",c))
     derpolys[[i]]<-deriv(polys[[i]],"l")
   }
@@ -214,8 +211,7 @@ tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,z){
   SOL<-optim(0,method="Brent",llike,derllike,lower=-1,upper=1)
   
   maxloglik<-SOL$value
-  Par<-SOL$par
-  
+
   if(length(vlist)>0){
     for(i in c(1:length(vlist))){
       
@@ -239,8 +235,7 @@ tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,z){
   }
   
   
-  NN<-sum(Nlist[notwlist[]])
-  MLAMBDA<-0
+
   
   polys<-list()
   derpolys<-list()
@@ -249,7 +244,6 @@ tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,z){
     b<-(Xlist[[notwlist[i]]][,v]%*%Xlist[[notwlist[i]]][,w])
     c<-(Xlist[[notwlist[i]]][,w]%*%Xlist[[notwlist[i]]][,w])
     
-    MLAMBDA<-MLAMBDA+(Nlist[notwlist[i]]/NN)*(b/a)
     polys[[i]]<-mp(paste0(a," l l-",2*b," l+",c))
     derpolys[[i]]<-deriv(polys[[i]],"l")
   }
@@ -297,7 +291,7 @@ tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,z){
 #         E= list of unoriented edges
 #OUTPUT:  d: vector of the same length of E. d[i]=0 is E[i,] is not directly I-identifiable
 #         and it's equal to 1 otherwise.
-dir_ident<-function(Ilist,E){
+dir_ident_edges<-function(Ilist,E){
   d<-c()
   for(i in c(1:length(E[,1]))){
     d[i]<-0
@@ -310,36 +304,26 @@ dir_ident<-function(Ilist,E){
   return(d)
 }
 
-#Function that computes that connected component of the node "u" in the unoriented part of 
-#the CPDAG
-#INPUT:   E= list of unoriented edges
-#         u= index of the node
-#OUTPUT:  E_u= list of edges in the connencted component
-connected_components<-function(E,cE,E_u,u){
-  len<-length(E[,1])
-  list_u<-which(E==u)
-  row_u<-col_u<-c()
-  for(i in c(1:length(list_u))){
-    row_u[i]<-list_u[i]%%l
-    col_u[i]<-list_u[i]%/%(l+1)+1
-    if(row_u[i]==0){
-      if(col_u[i]==1){
-        row_i[i]<-l
-      }else{
-        row_i[i]<-2*l
+
+#Computes a list of vertices inside the directly identifiable edges
+#definition 2.2 in the paper
+#INPUT:   d= 0/1 vector compute with dir_ident_edges
+#         E= list of unoriented edges
+#OUTPUT:  v_list= list of vertices
+dir_ident_vert<-function(E,d){
+  v_list<-c()
+  for(i in c(1:length(d))){
+    if(d[i]==1){
+      if(length(intersect(v_list,E[i,1]))==0){
+        v_list<-append(v_list,E[i,1])
+      }
+      if(length(intersect(v_list,E[i,2]))==0){
+        v_list<-append(v_list,E[i,2])
       }
     }
   }
-  cE<-rbind(cE,E[row_u,])
-  E_u<-E[row_u,]
-  vert_list<-E_u[,(3-col_u)]
-  E<-E[-row_u,]
-  for(i in c(1:length(list_u))){
-    connected_components()
-  }
-  return(E_u)
+  return(v_list)
 }
-
 
 #Function that computes an identifiable connected component after the collider search
 #INPUT:   E= list of unoriented edges
@@ -359,12 +343,12 @@ i_component<-function(E,IDvertices){
   
   check<-FALSE
   for(i in c(1:length(IDvertices))){
-    ind_int<-which(v_list==IDvertices[i])
+    ind_int<-which(v_list==IDvertices[i])   #MAYBE USELESS, IDvertices only contains the right ones
     if(check==FALSE){
       if(length(ind_int)>0){
-        cluster_ind<-members[ind_int]
-        if(c_size[ind_int]>1){
-          id_component<-which(members==ind_int)
+        cluster_ind<-members[[ind_int]]
+        if(c_size[cluster_ind]>1){
+          id_component<-which(members==cluster_ind)
           check<-TRUE
         }
       }
@@ -411,7 +395,7 @@ aftercollider_test<-function(Xlist,Ilist,Nlist,E,IDvertices){
     ll[i]<-root_likelihood(0,likelihood_matrix,IDvertices[i],c(),G)
     ll[i]<-ll[i]+likelihood_matrix[IDvertices[i],IDvertices[i]]
   }
-  return(IDvertices(which.max(ll)))
+  return(IDvertices[which.max(ll)])
 }
 
 
@@ -444,8 +428,10 @@ aftercollider_marginallikelihood<-function(Xlist,Ilist,Nlist,v){
   }
   maxloglik<- (-1/NN)*log(i_variance)
   
-  for(i in c(1:lenght(vlist))){
-    maxloglik<-maxloglik-(Nlist[i]/2)*log((Xlist[[i]][,v]%*%Xlist[[i]][,v]))
+  if(length(vlist)>0){
+    for(i in c(1:length(vlist))){
+      maxloglik<-maxloglik-(Nlist[i]/2)*log((Xlist[[i]][,v]%*%Xlist[[i]][,v]))
+    }
   }
   return(maxloglik)
 }
@@ -540,3 +526,6 @@ root_likelihood<-function(partial_lik,L,r,not_neigh,G){
   }
   return(partial_lik)
 }
+
+
+
