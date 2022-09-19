@@ -373,9 +373,48 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample){
 #         E= list of unoriented edges
 #         C= matrix of dependece measures
 #         thres= threshold for independence test 
+#OUTPUT:  oriented=  list of oriented edges
+#         unoriented= list of unoriented edges
+complete_triplet<-function(p,Xlist,Ilist,Nlist,E,C,thres){
+  Trip_out<-triplets(Xlist,Ilist,Nlist,E,C,thres)
+  U<-Trip_out$Ulist
+  O<-Trip_out$Olist
+  repeat{
+    if(length(U)==0){
+      break
+    }
+    d<-dir_ident_edges(Ilist,U)
+    v_list<-dir_ident_vert(U,d)
+    if(sum(d)==0){
+      break
+    }
+    Icomp<-i_component(matrix(U,ncol=2),v_list)
+    TBO<-Icomp$tboriented
+    U<-Icomp$unoriented
+    
+    d<-dir_ident_edges(Ilist,TBO)
+    IDvertices<-dir_ident_vert(TBO,d)
+    
+    
+    P_List<-aftercollider_test(Xlist,Ilist,Nlist,TBO,IDvertices)
+    O<-rbind(O,P_List$o_edges)
+    
+  }
+  return(list(oriented=O,unoriented=U))
+}
+
+
+#Performs the first part of procedure 1 of section 5.2
+#INPUT:   Xlist= list of samples
+#         Ilist= list of intervened nodes
+#         Nlist= list of sample sizes
+#         E= list of unoriented edges
+#         C= matrix of dependece measures
+#         thres= threshold for independence test 
 triplets<-function(Xlist,Ilist,Nlist,E,C,thres){
   m<-(nrow(E)+1)
   V_v<-c(1:m)  #list of vertices to "check" i.e possible colliders
+  print(V_v)
   UE<-E
   O<-numeric()       
   vcheck<-numeric()       #list of already checked vertices
@@ -462,6 +501,7 @@ triplets<-function(Xlist,Ilist,Nlist,E,C,thres){
     V_v<-V_v[-vcheck]        #remove the checked vertices from the list of possible colliders
   }
 }
+
 
 
 
