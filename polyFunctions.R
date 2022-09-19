@@ -375,7 +375,7 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample){
 #         thres= threshold for independence test 
 triplets<-function(Xlist,Ilist,Nlist,E,C,thres){
   m<-(nrow(E)+1)
-  V_v<-c(1:(m+1))  #list of vertices to "check" i.e possible colliders
+  V_v<-c(1:m)  #list of vertices to "check" i.e possible colliders
   UE<-E
   O<-numeric()       
   vcheck<-numeric()       #list of already checked vertices
