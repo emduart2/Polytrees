@@ -163,7 +163,7 @@ tripletlikelihood_coll<-function(Xlist,Ilist,Nlist,u,v,w){
 #         Nlist=list of sample sizes
 #         u,v,w indeces of the nodes
 #OUTPUT:  Maximal log-likelihood 
-tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,z){
+tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,w){
   
   l<-length(Xlist)
   notvlist<-c()
@@ -293,6 +293,7 @@ tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,z){
 #         and it's equal to 1 otherwise.
 dir_ident_edges<-function(Ilist,E){
   d<-c()
+  E<-matrix(E,ncol=2)
   for(i in c(1:length(E[,1]))){
     d[i]<-0
     for(j in c(1:length(Ilist))){
@@ -312,6 +313,7 @@ dir_ident_edges<-function(Ilist,E){
 #OUTPUT:  v_list= list of vertices
 dir_ident_vert<-function(E,d){
   v_list<-c()
+  E<-matrix(E,ncol=2)
   for(i in c(1:length(d))){
     if(d[i]==1){
       if(length(intersect(v_list,E[i,1]))==0){
@@ -377,6 +379,7 @@ aftercollider_test<-function(Xlist,Ilist,Nlist,E,IDvertices){
   v_list<-V(G)
   likelihood_matrix<-matrix(0,nrow=length(v_list),ncol=length(v_list))
   
+  E<-matrix(E,ncol=2)
   for(i in c(1:length(E[,1]))){
     u<-E[i,1]
     v<-E[i,2]
@@ -395,9 +398,63 @@ aftercollider_test<-function(Xlist,Ilist,Nlist,E,IDvertices){
     ll[i]<-root_likelihood(0,likelihood_matrix,IDvertices[i],c(),G)
     ll[i]<-ll[i]+likelihood_matrix[IDvertices[i],IDvertices[i]]
   }
-  return(IDvertices[which.max(ll)])
+  mm<-which.max(ll)
+  O<-root_oritentation(G,IDvertices[mm],c(),c())
+  return(list(root=ll[mm],o_edges=O))
 }
 
+
+#Recursive function that computes the maximum likelihood of the model in which r is the root
+#Base case input:   partial_lik=0, 
+#                   L=likelihood_matrix as defined in aftercollider_test
+#                   r= index of the root
+#                   not_neigh= c()
+#                   G= subgraph as defined in aftercollider_test
+#Output:            maximum likelihood of the model
+root_likelihood<-function(partial_lik,L,r,not_neigh,G){
+  r_neigh<-neighbors(G,r)
+  not_neigh_index<-which(r_neigh==not_neigh)
+  if(length(not_neigh)>0){
+    if(length(r_neigh)>1){
+      r_neigh<-r_neigh[-not_neigh_index]
+    }
+    else{
+      return(partial_lik)
+    }
+  }
+  for(j in c(1:length(r_neigh))){
+    partial_lik<-partial_lik+L[r,r_neigh[j]]
+    partial_lik<-root_likelihood(partial_lik,L,r_neigh[j],r,G)
+  }
+  return(partial_lik)
+}
+
+
+#Recursive function that computes the orientations in the model in which r is the root
+#Base case input:   O=c(), 
+#                   r= index of the root
+#                   not_neigh= c()
+#                   G= subgraph as defined in aftercollider_test
+#Output:            list of oriented edges
+
+root_oritentation<-function(G,r,not_neigh,O){
+  
+  r_neigh<-neighbors(G,r)
+  not_neigh_index<-which(r_neigh==not_neigh)
+  if(length(not_neigh)>0){
+    if(length(r_neigh)>1){
+      r_neigh<-r_neigh[-not_neigh_index]
+    }
+    else{
+      return(O)
+    }
+  }
+  for(j in c(1:length(r_neigh))){
+    O<-rbind(O,c(r,r_neigh[j]))
+    O<-root_oritentation(G,r_neigh[j],r,O)
+  }
+  return(O)
+}
 
 #Computes the marginal maximum likelihood of v after the collider search 
 #as in 4.2 of the paper
@@ -499,32 +556,6 @@ aftercollider_condlikelihood<-function(Xlist,Ilist,Nlist,u,v){
   
   return(maxloglik)
 
-}
-
-
-#Recursive function that computes the maximum likelihood of the model in which r is the root
-#Base case input:   partial_lik=0, 
-#                   L=likelihood_matrix as defined in aftercollider_test
-#                   r= index of the root
-#                   not_neigh= c()
-#                   G= subgraph as defined in aftercollider_test
-#Output:            maximum likelihood of the model
-root_likelihood<-function(partial_lik,L,r,not_neigh,G){
-  r_neigh<-neighbors(G,r)
-  not_neigh_index<-which(r_neigh==not_neigh)
-  if(length(not_neigh)>0){
-    if(length(r_neigh)>1){
-      r_neigh<-r_neigh[-not_neigh_index]
-    }
-    else{
-      return(partial_lik)
-    }
-  }
-  for(i in c(1:length(r_neigh))){
-    partial_lik<-partial_lik+L[r,r_neigh[i]]
-    partial_lik<-root_likelihood(partial_lik,L,r_neigh[i],r,G)
-  }
-  return(partial_lik)
 }
 
 
