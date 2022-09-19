@@ -808,6 +808,81 @@ regCoeff<-function(x,y){
 }
 #---------------
 
+##Function that computes the i-cpdag
+#INPUT:   Ilist= list of interventional settings
+#         A= adjacency matrix
+#OUPUT:   i-cpdag
+
+i_cpdag<-function(Ilist,A){
+  check<-FALSE
+  l_int<-length(Ilist)
+  p<-length(A[,1])
+  
+  for(i in c(1:l_int)){
+    if(length(Ilist[[i]][-1])==0){
+      check<-TRUE
+    }
+  }
+  
+  if(check==TRUE){
+    A_aug<-matrix(0,nrow=(p+l_int),ncol = (p+l_int))
+    for(i in c(1:p)){
+      for(j in c(1:p)){
+        A_aug[i,j]<-A[i,j]
+      }
+    }
+    for(i in c(1:l_int)){
+      A_aug[p+i,Ilist[[i]][-1]]<-1
+    }
+    G_aug<-graph_from_adjacency_matrix(A_aug)
+    V(G_aug)$name<-as.character(c(1:(p+l_int)))
+    BN_aug<-cpdag(as.bn(G_aug))
+    CPDAG_aug<-as.igraph(BN_aug)
+    return(induced_subgraph(CPDAG_aug,c(1:p)))
+  }
+  else{
+    G<-graph_from_adjacency_matrix(A)
+    V(G)$name<-as.character(c(1:p))
+    BN<-cpdag(as.bn(G))
+    CPDAG<-as.igraph(BN)
+    A_aug<-get.adjacency(CPDAG)
+    plot(graph_from_adjacency_matrix(A_aug))
+    
+    for(i in c(1:l_int)){
+      Jlist<-list()
+      for(j in c(1:l_int)){
+        if(j!=i){
+          Jlist[[j]]<-union(Ilist[[i]][-1],Ilist[[j]][-1])
+        }else{
+          Jlist[[j]]<-c()
+        }
+      }
+      A_i_aug<-matrix(0,nrow=(p+l_int),ncol = (p+l_int))
+      for(j in c(1:p)){
+        for(k in c(1:p)){
+          A_i_aug[j,k]<-A[j,k]
+        }
+      }
+      for(j in c(1:l_int)){
+        if(j!=i){
+          A_i_aug[p+j,Jlist[[j]]]<-1
+        }
+      }
+      
+      G_i_aug<-graph_from_adjacency_matrix(A_i_aug)
+      V(G_i_aug)$name<-as.character(c(1:(p+l_int)))
+      BN_i_aug<-as.igraph(cpdag(as.bn(G_i_aug)))
+      
+      CPDAG_i_aug<-induced_subgraph(BN_i_aug,c(1:p))
+
+      A_i_aug<-get.adjacency(CPDAG_i_aug)
+      A_aug<-pmin(A_i_aug,A_aug)
+    }
+    return(graph_from_adjacency_matrix(A_aug))
+  }
+}
+
+
 #---- F_test -- Based on Chow's test 1960
 # Xlist =  list of observational and interventinal data sets, each dataset consists of two
 #          columns. if swap = FALSE we test the the direction firstcolumn->secondcolum or e1->e2
