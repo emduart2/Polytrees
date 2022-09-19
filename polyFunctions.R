@@ -812,7 +812,7 @@ regCoeff<-function(x,y){
 ##Function that computes the i-cpdag
 #INPUT:   Ilist= list of interventional settings
 #         A= adjacency matrix
-#OUPUT:   Adjacency matrix of the i-cpdag
+#OUPUT:   i-cpdag
 
 i_cpdag<-function(Ilist,A){
   check<-FALSE
@@ -820,7 +820,7 @@ i_cpdag<-function(Ilist,A){
   p<-length(A[,1])
   
   for(i in c(1:l_int)){
-    if(length(Ilist[[i]])==0){
+    if(length(Ilist[[i]][-1])==0){
       check<-TRUE
     }
   }
@@ -853,7 +853,7 @@ i_cpdag<-function(Ilist,A){
       Jlist<-list()
       for(j in c(1:l_int)){
         if(j!=i){
-          Jlist[[j]]<-union(Ilist[[i]],Ilist[[j]])
+          Jlist[[j]]<-union(Ilist[[i]][-1],Ilist[[j]][-1])
         }else{
           Jlist[[j]]<-c()
         }
@@ -866,7 +866,7 @@ i_cpdag<-function(Ilist,A){
       }
       for(j in c(1:l_int)){
         if(j!=i){
-          A_i_aug[p+j,Jlist[[j]][-1]]<-1
+          A_i_aug[p+j,Jlist[[j]]]<-1
         }
       }
       
@@ -879,10 +879,9 @@ i_cpdag<-function(Ilist,A){
       A_i_aug<-get.adjacency(CPDAG_i_aug)
       A_aug<-pmin(A_i_aug,A_aug)
     }
-    return(A_aug)
+    return(graph_from_adjacency_matrix(A_aug))
   }
 }
-
 
 
 #---- F_test -- Based on Chow's test 1960
