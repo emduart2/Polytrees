@@ -811,7 +811,7 @@ regCoeff<-function(x,y){
 ##Function that computes the i-cpdag
 #INPUT:   Ilist= list of interventional settings
 #         A= adjacency matrix
-#OUPUT:   i-cpdag
+#OUPUT:   adjacency matrix of the i-cpdag
 
 i_cpdag<-function(Ilist,A){
   check<-FALSE
@@ -838,7 +838,8 @@ i_cpdag<-function(Ilist,A){
     V(G_aug)$name<-as.character(c(1:(p+l_int)))
     BN_aug<-cpdag(as.bn(G_aug))
     CPDAG_aug<-as.igraph(BN_aug)
-    return(induced_subgraph(CPDAG_aug,c(1:p)))
+    CPDAG<-induced_subgraph(CPDAG_aug,c(1:p))
+    return(get.adjacency(CPDAG))
   }
   else{
     G<-graph_from_adjacency_matrix(A)
@@ -874,14 +875,13 @@ i_cpdag<-function(Ilist,A){
       BN_i_aug<-as.igraph(cpdag(as.bn(G_i_aug)))
       
       CPDAG_i_aug<-induced_subgraph(BN_i_aug,c(1:p))
-
+      
       A_i_aug<-get.adjacency(CPDAG_i_aug)
       A_aug<-pmin(A_i_aug,A_aug)
     }
-    return(graph_from_adjacency_matrix(A_aug))
+    return(A_aug)
   }
 }
-
 
 #---- F_test -- Based on Chow's test 1960
 # Xlist =  list of observational and interventinal data sets, each dataset consists of two
