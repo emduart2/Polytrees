@@ -7,8 +7,8 @@ library(foreach)
 library(utils)
 library(progressr)
 
-# parameter space to explore (sdatasets -1 is c(),
-# interventionSize >= 1 is the absolute value of nodes to intervene)
+# parameter space to explore
+# (interventionSize >= 1 is the absolute value of nodes to intervene)
 df_params <- expand.grid(
   tsize = c(100),
   totalSamples = c(200),
