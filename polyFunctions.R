@@ -140,14 +140,14 @@ chowLiu<-function(R){
   return(g)
 }
 
-#-------------------------------------------------------------
 #-- interventionalData ---- #
 #-- This function takes a dag G and a list
 #INPUT: G = Dag 
 #       L = coefficient matrix 
-#       interventionTargets= list of intervention Targets, the 
-#                            first entry of this list is the sample size
-#                            of the observational setting
+#       interventionTargets= list of intervention Targets, this
+#                           is a list of vectors c(n_I,I) where n_I is the
+#                           sample size of the experiment I and I is the set
+#                           of intervened nodes.
 #OUTPUT: A list with three sublist,
 #       List1= This is a list of correlation matrices
 #              obtained from the interventional experiments.
@@ -155,23 +155,23 @@ chowLiu<-function(R){
 #              of the intervened coefficients
 #       List3= This is a list of the sample size of each intervention
 #       List4= The complete data set for all interventional experiments.      
-#
+# 
 interventionalData<-function(G,L,interventionTargets){
   p<-nrow(L)
-  n<-interventionTargets[[1]]
-  nList<-c(n)
-  interventionTargets<-interventionTargets[-1]
-  X<-samplingDAG(n,L)
-  Rlist<-list(sample.cor(X)) # Initialize with an observational correlation matrix
-  Llist<-list(L)
-  Xlist<-list(X)
+  ndatasets<-length(interventionTargets)
+  Rlist<-list()
+  Llist<-list()
+  Xlist<-list()
+  nList<-list()
   for(I in interventionTargets){
     nI<-I[1] # first element is the sample size
-    tI<-I[-1] # remaining elements are the intervention targets
-    LI<-matrix(0,p,p)
-    LI<-L
-    if (length(I)>0){
-      for (j in (1:length(tI))) {
+    if(length(I)==1){ # int this case there are no intervention targets.
+      LI<-L
+    } else{
+      tI<-I[-1] # remaining elements are the intervention targets
+      LI<-matrix(0,p,p)
+      LI<-L
+      for (j in (1:length(tI))) { # this changes the coeff in the structural eqns
         parentsj<-neighbors(G,tI[j],mode = "in")
         if (length(parentsj)>0){
           for (k in parentsj){
@@ -190,7 +190,6 @@ interventionalData<-function(G,L,interventionTargets){
   RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList,Xs=Xlist)
   return(RLlist)
 }
-
 #Imatrix
 # INPUT: corrsIs = Ordered List of observed correlation matrices
 #                 associated to the interventional experiments
