@@ -847,7 +847,6 @@ i_cpdag<-function(Ilist,A){
     BN<-cpdag(as.bn(G))
     CPDAG<-as.igraph(BN)
     A_aug<-get.adjacency(CPDAG)
-    plot(graph_from_adjacency_matrix(A_aug))
     
     for(i in c(1:l_int)){
       Jlist<-list()
