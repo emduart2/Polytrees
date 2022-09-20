@@ -112,23 +112,19 @@ coeffLambda<-function(G){
 #-----------------
 # Creating a sample from a dagModel specified by a
 # matrix of coefficients Lambda
+# Inputs:
+#   n: Integer. Number of samples.
+#   Lambda: Numeric Matrix. Matrix of coefficients
+# Outputs:
+#   Matrix: n-by-dim(Lambda,1) matrix with samples.
 samplingDAG<-function(n,Lambda){
   p<-nrow(Lambda)
-  eps<-c() # sample from the errors
-  for( i in (1:p)){
-    eps<-cbind(eps,rnorm(n))
-  }
-  Xmat<-matrix(0,n,p)
-  Id<-diag(rep(1,p))
-  #Lambda <- Lambda+Id
-  Lambda<-solve(Id-Lambda)
-  for( j in (1:p)){
-    for(i in (1:p)){
-      Xmat[,j]<- Xmat[,j]+Lambda[i,j]*eps[,i] 
-    }
-  }
+  eps <- matrix( rnorm(p*n,mean=0,sd=1), p, n) 
+  lambdaInv<-solve(diag(rep(1,p))-Lambda)
+  Xmat <- t(lambdaInv %*% eps)
   return(Xmat)
 }
+
 #------------------------
 #---------------------------------------------------------------------
 # This functions learns a skeleton from the absolute value
@@ -148,15 +144,20 @@ chowLiu<-function(R){
 #                           is a list of vectors c(n_I,I) where n_I is the
 #                           sample size of the experiment I and I is the set
 #                           of intervened nodes.
-#OUTPUT: A list with three sublist,
-#       List1= This is a list of correlation matrices
+#       kindOfIntervention = String. Denotes the kind of intervention as in 
+#               Yang et al. 2018. Possible strings: "random"=random coefficient,
+#               "perfect"= coefficient set to 0, "imperfect"=coefficient set to 
+#               0 with probability 0.5, "inhibitory"=coefficient*0.1
+#OUTPUT: A list with four sublist,
+#       Rs = This is a list of correlation matrices
 #              obtained from the interventional experiments.
-#       List2= This is a list of coefficient matrices with the values
+#       Ls = This is a list of coefficient matrices with the values
 #              of the intervened coefficients
-#       List3= This is a list of the sample size of each intervention
-#       List4= The complete data set for all interventional experiments.      
+#       Ns = This is a list of the sample size of each intervention
+#       Xs = The complete data set for all interventional experiments.      
 # 
-interventionalData<-function(G,L,interventionTargets){
+
+interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"){
   p<-nrow(L)
   ndatasets<-length(interventionTargets)
   Rlist<-list()
@@ -175,7 +176,22 @@ interventionalData<-function(G,L,interventionTargets){
         parentsj<-neighbors(G,tI[j],mode = "in")
         if (length(parentsj)>0){
           for (k in parentsj){
-            LI[k,tI[j]]<-ruunif(1,0.3,1)
+            
+            # parse kindOfIntervention
+            if(kindOfIntervention == "random"){
+              coeff <- ruunif(1,0.3,1)
+            } else if(kindOfIntervention == "perfect"){
+              coeff <- 0
+            } else if(kindOfIntervention == "imperfect"){
+              if(rbinom(1,1,0.5)==1) {
+                coeff <- 0
+              }
+            } else if(kindOfIntervention == "inhibitory"){
+              coeff <- LI[k,tI[j]] * 0.1
+            } else {
+              stop("Invalid value of kindOfIntervention.")
+            }
+            LI[k,tI[j]]<-coeff
           }
         }
       }
@@ -237,7 +253,7 @@ wmedianCorrels<-function(corrIs,nIs){
 
 #---- Weighted Mean correlation matrix
 #----
-#-wmedianCorrels
+#-wmeanCorrels
 # INPUT: corrsIs = Ordered List of observed correlation matrices
 #                 associated to the interventional experiments
 #        nIs = Ordeded List of sample sizes associated to each
@@ -304,7 +320,7 @@ testLearningONE<-function(id,G,L,interventionTargets){
 #        propObsSample= proportion of the samples in the Observed experiment.
 #        totalSample = sum of the sample sizes of all interventional and obsv. experiments
 interventionalSetting<-function(p,proprI,propObsSample,totalSample){
-  g<-pruferwithskeleton(p)
+  g<-pruferwithskeletonOpt(p)
   numInterv<- ceiling(p*proprI) # proportion of nodes to intervene on
   tI <- sample(1:p, numInterv, replace=F)
   lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
@@ -337,10 +353,13 @@ interventionalSetting<-function(p,proprI,propObsSample,totalSample){
 #        totalSample = sum of the sample sizes of all interventional and obsv. experiments, to be specified
 #        only if sdatasets=c().
 #
-##       If interventionsize==1 and sdatasets==c(), then you get the same output of "interventionalSetting" 
-##       where proprI=totalsample/ndatsets
-isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample){
-  g<-pruferwithskeleton(p)
+#        checkConservativity= Boolean. If TRUE, ensures that resulting family
+#           of interventional targets is conservative. Default: FALSE
+#
+# If interventionsize==1 and sdatasets==c(), then you get the same output of "interventionalSetting" 
+# where proprI=totalsample/ndatsets
+isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,checkConservativity=FALSE){
+  g<-pruferwithskeletonOpt(p)
   lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
   
   if(length(sdatasets)==0){
@@ -354,10 +373,43 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample){
     interventionsize[1]<-0
   }
   interventionTargets<-list()
-  for(i in c(1:ndatasets)){
-    I<-sample(p,interventionsize[i],replace=FALSE)
-    interventionTargets<-append(interventionTargets,list(c(sdatasets[i],I)))
+  if(! checkConservativity) {
+    # just independently sample interventional sets
+    for(i in c(1:ndatasets)){
+      I<-sample(p,interventionsize[i],replace=FALSE)
+      interventionTargets<-append(interventionTargets,list(c(sdatasets[i],I)))
+    }
+  } else {
+
+    interventionTargets <- vector("list", ndatasets)
+    
+    # first sample 
+    I <- sample(p,interventionsize[i],replace=FALSE)
+    interventionTargets[[1]] <- c(sdatasets[1],I)
+    
+    # sample where to ensure that all nodes that were intervened in the first sample
+    # will not be intervened to guarantee conservativity
+    stillNeedsToBeNotIntervened <- I
+    notToIntervene <- vector("list", ndatasets)
+    maxNumNotToSample <- p-interventionsize
+    ind <- 2:ndatasets
+    if(sum(maxNumNotToSample[ind]) < length(stillNeedsToBeNotIntervened))
+      stop("Conservative family of intervention targets not possible with given parameters.")
+    for(node in stillNeedsToBeNotIntervened){
+      
+      # sample intervention index where node ensured not to be intervened
+      j <- sample(x = ind, 1, prob = maxNumNotToSample[ind]/sum(maxNumNotToSample[ind]))
+      notToIntervene[[j]] <- append(notToIntervene[[j]], node)
+      maxNumNotToSample[j] <- maxNumNotToSample[j] - 1
+    }
+    
+    # sample remaining interventions
+    for(i in 2:ndatasets){
+      I <- sample(setdiff(1:p,notToIntervene[[i]]), interventionsize[i], replace=FALSE)
+      interventionTargets[[i]] <- c(sdatasets[i],I)
+    }
   }
+
   return(list(gTrued= g$Directed, gTrues=g$Skeleton, L=lambdaCoeffs, targetsI=interventionTargets))
 }
 
@@ -681,6 +733,15 @@ pruferwithskeleton <- function(k){
   ret<-list(Directed=adj_matrix,Skeleton=adj_matrixs)
   return(ret)
 }
+
+# same as pruferwithskeleton, but with optimized built-in method
+pruferwithskeletonOpt <- function(k){
+  undirected = sample_tree(k, directed=FALSE, method="prufer")
+  directed = as.directed(undirected, mode="random")
+  return(list(Directed=as_adjacency_matrix(directed), 
+              Skeleton=as_adjacency_matrix(undirected)))
+}
+
 
 #get edgelist from adjacecncy matrix
 edgelist_toadjmatrix<-function(L){
