@@ -163,10 +163,10 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
   Rlist<-list()
   Llist<-list()
   Xlist<-list()
-  nList<-list()
+  nList<-c()
   for(I in interventionTargets){
     nI<-I[1] # first element is the sample size
-    if(length(I)==1){ # int this case there are no intervention targets.
+    if(length(I)==1){ # in this case there are no intervention targets.
       LI<-L
     } else{
       tI<-I[-1] # remaining elements are the intervention targets
