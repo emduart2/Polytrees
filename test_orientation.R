@@ -25,7 +25,7 @@ for(ss in c(1:length(totalSamples))){
         E<-get.edgelist(G)
 
         
-        thres<-0.5*log(sum(Nlist))
+        thres<-0.5*log(sum(Nlist))*length(Ilist)
         
         lC<-Imatrix(C_list,ID$Ns)
 
