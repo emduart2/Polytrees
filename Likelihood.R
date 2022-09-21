@@ -69,7 +69,7 @@ pairlikelihood<-function(Xlist,Ilist,Nlist,u,v){
   for(i in c(1:l)){
     maxloglik<-maxloglik+(Nlist[i]/2)*log((Xlist[[i]][,u]%*%Xlist[[i]][,u]))
   }
-  return(-maxloglik)
+  return(-maxloglik-0.5*log(sum(Nlist))*(2*length(Ilist)+1+length(vlist)))
 }
 
 
@@ -94,6 +94,7 @@ tripletlikelihood_coll<-function(Xlist,Ilist,Nlist,u,v,w){
       vlist<-append(vlist,i)
     }
   }
+
   
 
   polys<-list()
@@ -135,12 +136,12 @@ tripletlikelihood_coll<-function(Xlist,Ilist,Nlist,u,v,w){
   
   if(length(vlist)>0){
     for(i in c(1:length(vlist))){
-      a<-(Xlist[[notvlist[i]]][,u]%*%Xlist[[notvlist[i]]][,u])
-      b<-(Xlist[[notvlist[i]]][,w]%*%Xlist[[notvlist[i]]][,w])
-      c<-(Xlist[[notvlist[i]]][,v]%*%Xlist[[notvlist[i]]][,v])
-      d<-(Xlist[[notvlist[i]]][,v]%*%Xlist[[notvlist[i]]][,u])
-      e<-(Xlist[[notvlist[i]]][,v]%*%Xlist[[notvlist[i]]][,w])
-      f<-(Xlist[[notvlist[i]]][,w]%*%Xlist[[notvlist[i]]][,u])  
+      a<-(Xlist[[vlist[i]]][,u]%*%Xlist[[vlist[i]]][,u])
+      b<-(Xlist[[vlist[i]]][,w]%*%Xlist[[vlist[i]]][,w])
+      c<-(Xlist[[vlist[i]]][,v]%*%Xlist[[vlist[i]]][,v])
+      d<-(Xlist[[vlist[i]]][,v]%*%Xlist[[vlist[i]]][,u])
+      e<-(Xlist[[vlist[i]]][,v]%*%Xlist[[vlist[i]]][,w])
+      f<-(Xlist[[vlist[i]]][,w]%*%Xlist[[vlist[i]]][,u])  
       
       pol<-mp(paste0(a," l_u l_u+",b," l_w l_w+",c,"-",2*d," l_u-",2*e," l_w+",2*f," l_u l_w"))
       lambda_u<-(d*b-f*e/(a*b-f^2))
@@ -152,7 +153,7 @@ tripletlikelihood_coll<-function(Xlist,Ilist,Nlist,u,v,w){
   for(i in c(1:l)){
     maxloglik<-maxloglik+(Nlist[i]/2)*log((Xlist[[i]][,w]%*%Xlist[[i]][,w]))
   }
-  return(-maxloglik)
+  return(-maxloglik-0.5*log(sum(Nlist))*(2*(2*length(Ilist)+length(vlist)+1)))
 }
 
 
@@ -280,7 +281,7 @@ tripletlikelihood_noncoll<-function(Xlist,Ilist,Nlist,u,v,w){
       maxloglik<-maxloglik+(Nlist[wlist[i]]/2)*log(suppressMessages(as.function(mp(paste0(a," l l-",2*b," l+",c))))(b/a))
     }
   }
-  return(-maxloglik)
+  return(-maxloglik-0.5*log(sum(Nlist))*(3*length(Ilist)+length(vlist)+length(wlist)+2))
 }
 
 
@@ -477,20 +478,20 @@ aftercollider_marginallikelihood<-function(Xlist,Ilist,Nlist,v){
     }
   }
   
-  NN<-sum(Nlist[notvlist[]])
+  NN<-sum(Nlist[notvlist])
   
   i_variance<-0
   for(i in c(1:length(notvlist))){
     i_variance<-i_variance+Xlist[[notvlist[i]]][,v]%*%Xlist[[notvlist[i]]][,v]
   }
-  maxloglik<- (-1/NN)*log(i_variance)
+  maxloglik<- -(NN/2)*log(i_variance)
   
   if(length(vlist)>0){
     for(i in c(1:length(vlist))){
-      maxloglik<-maxloglik-(Nlist[i]/2)*log((Xlist[[i]][,v]%*%Xlist[[i]][,v]))
+      maxloglik<-maxloglik-(Nlist[i]/2)*log((Xlist[[vlist[i]]][,v]%*%Xlist[[vlist[i]]][,v]))
     }
   }
-  return(maxloglik)
+  return(maxloglik-0.5*log(sum(Nlist))*(1+length(vlist)))
 }
 
 
@@ -516,7 +517,7 @@ aftercollider_condlikelihood<-function(Xlist,Ilist,Nlist,u,v){
     }
   }
   
-  NN<-sum(Nlist[notvlist[]])
+  NN<-sum(Nlist[notvlist])
 
   polys<-list()
   i_covariance<-0
@@ -540,7 +541,7 @@ aftercollider_condlikelihood<-function(Xlist,Ilist,Nlist,u,v){
     i_residual<-i_residual+suppressMessages(as.function(polys[[i]]))(i_reg_coef)
   }
   
-  maxloglik<- (NN/2)*log(i_residual)
+  maxloglik<- -(NN/2)*log(i_residual)
   
   
   if(length(vlist)>0){
@@ -554,7 +555,7 @@ aftercollider_condlikelihood<-function(Xlist,Ilist,Nlist,u,v){
     }
   }
   
-  return(maxloglik)
+  return(maxloglik-0.5*log(sum(Nlist))*(2+2*length(vlist)))
 
 }
 
