@@ -24,7 +24,8 @@
 # install.packages("poolr")
 # install.packages("harmonicmeanp")
 # install.packages("DescTools")
-# install.packages("graph")
+# install.packages("igraph")
+# install.packages("mpoly")
 library(BNSL)
 library(bnlearn)
 library(igraph)
@@ -42,6 +43,7 @@ library(harmonicmeanp)
 library(DescTools)
 library(Matrix)
 library(graph)
+library(mpoly)
 #-------------------------
 
 # Function for calculating sample covariance matrix
@@ -767,15 +769,10 @@ I_env<-function(E,interventionTargets){
   n<-nrow(E)
   l<-length(interventionTargets)
   Env_mat<-matrix(0,n,l) 
-  Env_list<-c()
   for(i in c(1:n)){
     for(j in c(1:l)){
       if(is.element(E[i,1],interventionTargets[[j]])&&is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<-2
-        c<-TRUE
-      }
-      if(!(is.element(E[i,1],interventionTargets[[j]])) && !(is.element(E[i,2],interventionTargets[[j]]))){
-        c<-TRUE
       }
       if(is.element(E[i,1],interventionTargets[[j]])&&!is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<-1
@@ -786,11 +783,9 @@ I_env<-function(E,interventionTargets){
         c<-TRUE
       }
     }
-    if(c==TRUE){
-      Env_list<-rbind(Env_list,c(i))
-    }
+
   }
-  r_list<-list(Env_matrix=Env_mat,Env_list=Env_list)
+  r_list<-list(Env_matrix=Env_mat)
   return(r_list)
 }
 #----
@@ -1002,7 +997,7 @@ F_test<-function(Xlist,alpha,swap){
 ##<<<<<<< HEAD
 
 ##=======
-##Takes as imput the the lists of oriented/unoriented edges and the size of the tree
+##Takes as input the the lists of oriented/unoriented edges and the size of the tree
 #gives as output the adjacency matrix of the cpdag
 cpdag_from_lists<-function(Olist,Ulist,p){
   A<-Matrix(matrix(0,p,p),sparse=TRUE)
