@@ -207,7 +207,7 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
     CovI<-sample.cov(XI)
     RI<-cov2cor(CovI)
     Covlist<-append(Covlist,list(CovI))
-    Rlist<-append(Rlist,RI)
+    Rlist<-append(Rlist,list(RI))
     Llist<-append(Llist,list(LI))
     nList<-append(nList,nI)
     Xlist<-append(Xlist,list(XI))
