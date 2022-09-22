@@ -789,45 +789,55 @@ I_env<-function(E,interventionTargets){
   return(r_list)
 }
 #----
-#----- Edgewise orientations
-#-- pairs
-#-- This function orients a list of edges using:
-#   E= matrix of unoriented edges
-#   O= matrix of already oriented edges 
-#   alpha = significance level for the test
-#   Xs = list of all data sets (observed and interventional)
-#   Is = list of intervention targets as in the outoput of the interventional setting function
-pairs<-function(E,O,alpha,Xs,IStargets){
+#----- Edgewise orientations with pairs
+# New version of pairs
+# E = matrix. each row is an edge and each column is a vertex of the edge. these 
+#     are unoriented edges
+pairs<-function(E,Xs,Ilist,alpha,meth="min"){
+  O<-c()
   U<-c()
+  ndatasets<-length(Ilist)
   if(length(E)!=0){
-    interTargets<-lapply(dropFirst(IStargets),dropFirst) # This removes the sample size of each interventional exp
-    IE<-I_env(E,interTargets)
-    for (i in IE$Env_list){
+    l<-length(Xs)
+    IE<-I_env(E,Ilist)
+    for(i in c(1:nrow(E))){
       e1<-E[i,1]
-      e2<-E[i,2] # Initialize the lists below with the observational data set
-      Xe1e2<-list(cbind(Xs[[1]][,e1],Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e1->e2
-      Xe2e1<-list(cbind(Xs[[1]][,e1],Xs[[1]][,e2])) # list to save the data sets relevant to test the direction e2->e1
-      for (k in c(2:length(Xs))){
-        if (IE$Env_matrix[i,k-1]== 1 | IE$Env_matrix[i,k-1]==0){
-          Xe1e2<-append(Xe1e2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))
+      e2<-E[i,2] 
+      Ie1e2<-append(which(IE$Env_matrix[i,]==0),which(IE$Env_matrix[i,]==1)) # indices suitable to test e1 e2
+      Ie2e1<-append(which(IE$Env_matrix[i,]==0),which(IE$Env_matrix[i,]==-1)) # indices suitable to test e2 e1
+      if(length(Ie1e2)>1 & length(Ie2e1)>1){ # In this case we can test both directions
+        Xe1e2 <- vector(mode='list', length=length(Ie1e2)) # list to save the data sets relevant to test the direction e1->e2
+        Xe2e1<- vector(mode='list', length=length(Ie2e1))  # list to save the data sets relevant to test the direction e2->e1
+        for(k in Ie1e2) {Xe1e2<-append(Xe1e2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # the order in of this two columns
+        for(k in Ie2e1) {Xe2e1<-append(Xe2e1,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # matters to perform the test
+        Xe1e2<-Xe1e2[-which(sapply(Xe1e2, is.null))]
+        Xe2e1<-Xe2e1[-which(sapply(Xe2e1, is.null))]
+        o1<- F_test(Xe1e2) # Test e1->e2---
+        o2<- F_test(Xe2e1)  # Test e2->e1
+        if (meth=="min"){
+          if(min(o1)< min(o2)){O<-rbind(O,c(e2,e1))}   # If o1 has the smallest p-value we reject  e1->e1
+          else if(min(o2)<min(o1)){O<-rbind(O,c(e1,e2))}
         }
-        if (IE$Env_matrix[i,k-1]== -1 | IE$Env_matrix[i,k-1]==0){
-          Xe2e1<-append(Xe2e1,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))
+        else if (meth=="max"){
+          if(max(o1)< max(o2)){O<-rbind(O,c(e2,e1))}   # If o2 has the hightes p-value we accept  e2->e1
+          else if(max(o2)<max(o1)){O<-rbind(O,c(e1,e2))}
         }
       }
-      #-- here we write the test for orienting the edges.
-      o1<- F_test(Xe1e2,alpha,FALSE) # FALSE is to test e1->e2---
-      o2<- F_test(Xe2e1,alpha,TRUE)  # This is to test the reverse/swap e2->e1
-      if (o1==1 && o2==0){
-        O<-rbind(O,c(e1,e2))
+      else if(length(Ie1e2)<2 & length(Ie2e1)>1){ # Can only use the test for e2->e1
+        Xe2e1<- vector(mode='list', length=length(Ie2e1))
+        for(k in Ie2e1) {Xe2e1<-append(Xe2e1,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # order matters to perform the test
+        Xe2e1<-Xe2e1[-which(sapply(Xe2e1, is.null))]
+        o2<-F_test(Xe2e1)
+        if(length(which(o2<alpha/length(Ie2e1)))==0) O<-rbind(O,c(e2,e1)) else O<-rbind(O,c(e1,e2))
       }
-      if (o1==0 && o2==1){
-        O<-rbind(O,c(e2,e1))
+      else if(length(Ie1e2)>1 & length(Ie2e1)<1){
+        Xe1e2<- vector(mode='list', length=length(Ie1e2))
+        for(k in Ie1e2) {Xe1e2<-append(Xe1e2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e1])))} # order matters to perform the test
+        Xe1e2<-Xe1e2[-which(sapply(Xe1e2, is.null))]
+        o1<-F_test(Xe1e2)
+        if(length(which(o1<alpha/length(Ie1e2)))==0) O<-rbind(O,c(e1,e2)) else O<-rbind(O,c(e2,e1))
       }
-      if(o1==o2){
-        U<-rbind(U,c(e1,e2))
-      }
-      
+      else{U<-rbind(U,c(e1,e2))}
     }
   }
   return(list(Olist=O,Ulist=U))
@@ -941,56 +951,42 @@ i_cpdag<-function(Ilist,A){
 }
 
 #---- F_test -- Based on Chow's test 1960
-# Xlist =  list of observational and interventinal data sets, each dataset consists of two
-#          columns. if swap = FALSE we test the the direction firstcolumn->secondcolum or e1->e2
-#          if swap = TRUE we test e2->e1
-#alpha = significance
-# 
-# b0  = pooled regression coeff
-# b1 = regression coeff of grouped data minus one intervention data set
-# b2 = regression coeff of the extracted intervention data set
-
-F_test<-function(Xlist,alpha,swap){
-  Xcombined<-groupD(Xlist)
-  N<-nrow(Xcombined)
+#------
+# If F_test receives Xe1e2 it means we test e1->e2 i.e if e1 is a causal predictor for e2
+# If F_test receives Xe2e1 it means we test e2->e1
+# INPUT: This function receives a list of data sets with two columns. To test the
+# hypothesis that the first column c1 is a parent of the second column c2 using comparison
+# of regression coefficients.
+# Test c1->c2. 
+# OUTPUT: A list of p-values
+F_test<-function(Xlist){
   n<-length(Xlist)
-  bfcorrection<-alpha/n
-  p_vals<-c()
-  if ( swap == FALSE){
-    b0<-regCoeff(Xcombined[,1],Xcombined[,2]) # Regression coefficients of all data combined
-    for (i in c(1:length(Xlist))){
-      XnotI<-groupD(Xlist[-i]) # data set that doesnt have the sample I
-      XI<-Xlist[[i]] # data set for the sample I
-      b1<-regCoeff(XnotI[,1],XnotI[,2])
-      b2<-regCoeff(XI[,1],XI[,2])
-      Q3<-sum((XnotI[,1]*b1-XnotI[,1]*b0)^2)+ sum((XI[,1]*b2-XI[,1]*b0)^2)
-      Q2<-sum((XnotI[,2]-XnotI[,1]*b1)^2)+sum((XI[,2]-XI[,1]*b2)^2)
-      Fstat<- (N-2)*Q3/Q2
-      p_val<-pf(Fstat,1,N-2)
-      p_vals<rbind(p_vals,c(p_val))
-      if (p_val< bfcorrection){
-        return(0)
-      }
-    }
-    return(1)
+  pvals<-c()
+  for (i in c(1:length(Xlist))){
+    XnotI<-groupD(Xlist[-i]) # data set that doesnt have the i-th sample
+    XI<-Xlist[[i]] # data set for the sample I
+    Xe<-matrix(cbind(rep(1,nrow(XI)),XI[,1]),nrow=nrow(XI),ncol=2)
+    Xenot<-matrix(cbind(rep(1,nrow(XnotI)),XnotI[,1]),nrow=nrow(XnotI),ncol=2)
+    Ye<-matrix(cbind(rep(1,nrow(XI)),XI[,2]),nrow=nrow(XI),ncol=2)
+    Yenot<-matrix(cbind(rep(1,nrow(XnotI)),XnotI[,2]),nrow=nrow(XnotI),ncol=2)
+    regCoeffNotI<-regCoeff(Xenot[,2],Yenot[,2]) # OLS estimator computed on Ie
+    #print(regCoeffNotI)
+    D<-matrix(Ye-(regCoeffNotI[1]+regCoeffNotI[2]*Xe),nrow = nrow(Ye),ncol=1)
+    ne<-nrow(Xe)
+    nenot<-nrow(Xenot)
+    SigmaD<- Xe%*%solve(t(Xenot)%*%Xenot)%*%t(Xe) +diag(1,nrow=ne) #+  # Xe%*%solve(t(Xenot)%*%Xenot)%*%t(Xe)
+    sigmahatYnote<-var(Yenot[,2]-(regCoeffNotI[1]+regCoeffNotI[2]*Xenot[,2]))
+    Q<-t(D)%*%SigmaD%*%D/(sigmahatYnote*nrow(Xe))
+    p_val<-pf(Q,ne,nenot-2, lower.tail=FALSE,log.p = FALSE)
+    #print("This is a pvalue")
+    #print(p_val)
+    pvals<-cbind(pvals,c(p_val))
+    #print(c(nrow(D),nrow(SigmaD),nrow(Xe),nrow(XI),Q,sigmahatXnote,p_val))
+    #if (p_val< bfcorrection){
+    #  return(0) # reject c1->c2
+    #}
   }
-  if ( swap == TRUE){
-    b0<-regCoeff(Xcombined[,2],Xcombined[,1])
-    for (i in c(1:length(Xlist))){
-      XnotI<-groupD(Xlist[-i])
-      XI<-Xlist[[i]]
-      b1<-regCoeff(XnotI[,2],XnotI[,1])
-      b2<-regCoeff(XI[,2],XI[,1])
-      Q3<-sum((XnotI[,2]*b1-XnotI[,2]*b0)^2)+ sum((XI[,2]*b2-XI[,2]*b0)^2)
-      Q2<-sum((XnotI[,1]-XnotI[,2]*b1)^2)+sum((XI[,1]-XI[,2]*b2)^2)
-      Fstat<- (N-2)*Q3/Q2
-      p_val<-pf(Fstat,1,N-2)
-      if (p_val<bfcorrection){
-        return(0)
-      }
-    }
-    return(1)
-  }
+  return(pvals) # do not reject c2->c1
 }
 #--------- end of F_test
 #----------------------------------
