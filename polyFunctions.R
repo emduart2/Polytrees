@@ -121,8 +121,10 @@ samplingDAG<-function(n,Lambda){
   p<-nrow(Lambda)
   eps <- matrix( rnorm(p*n,mean=0,sd=1), p, n) 
   lambdaInv<-solve(diag(rep(1,p))-Lambda)
-  Xmat <- t(lambdaInv %*% eps)
-  return(Xmat)
+  # XmatIncorrect <- t(lambdaInv %*% eps)
+  XmatCorrect <- t(t(lambdaInv) %*% eps)
+  
+  return(XmatCorrect)
 }
 
 #------------------------
