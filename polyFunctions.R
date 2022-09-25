@@ -280,62 +280,8 @@ wmeanCorrels<-function(corrIs,nIs){
 }
 
 
-#-----
-# This function takes and id=identifier, a graph G and a
-# set of intervention targets. 
-# The set of intervention targets contains sample sizes for each experiment
-# and the targeted nodes.
-# The output of this function is a collection
-# of undirected graphs together with the SHD between the 
-# true graph and the one learned by Chow-Liu. 
-# Three learning algorithms are considered here using
-# Chow-Liu with three different weight matrices, using
-# an observed correlation matrix, a weighted median and a weighted mean
-# the ONE in the name refers to the fact that this function does the
-# learning for one instance of a dag a coefficient matrix and a set of
-# intervention targets.
-testLearningONE<-function(id,G,L,interventionTargets){
-  intervExps<-interventionalData(G,L,interventionTargets)
-  R1<-intervExps$Rs[[1]] # Observed correlations
-  R2<-wmeanCorrels(intervExps$Rs,intervExps$Ns) # weighted mean Correls
-  R3<-wmedianCorrels(intervExps$Rs,intervExps$Ns) # weighted median Correls
-  G1<-chowLiu(R1)
-  G2<-chowLiu(R2$Rmean)
-  G3<-chowLiu(R3$Rmedian)
-  I1<- as_adjacency_matrix(G1)
-  I2<- as_adjacency_matrix(G2)
-  I3<- as_adjacency_matrix(G3)
-  gTrue <- graph_from_edgelist( as_edgelist(G), directed = FALSE)
-  Itrue <- as_adjacency_matrix(gTrue)
-  p <- nrow(R1)
-  SHDG1 <- sum(abs((Itrue-I1)))/(2*(p-1)) # compute structural Hamming distance for each learned graph
-  SHDG2 <- sum(abs((Itrue-I2)))/(2*(p-1))
-  SHDG3 <- sum(abs((Itrue-I3)))/(2*(p-1))
-  return(list(Gobsv=G1, Gmean=G2, Gmedian=G3,shd1=SHDG1,shd2=SHDG2,shd3=SHDG3))  
-}
 
 
-
-# The next function does simulations with single node interventions
-# This function generates a DAG, a list of intervention targets 
-# with corresponding sample sizes and a matrix L of coefficients
-# INPUT:  p = number of nodes in the dag
-#        proprI = percentage of nodes that will get a single target intervention
-#        propObsSample= proportion of the samples in the Observed experiment.
-#        totalSample = sum of the sample sizes of all interventional and obsv. experiments
-interventionalSetting<-function(p,proprI,propObsSample,totalSample){
-  g<-pruferwithskeletonOpt(p)
-  numInterv<- ceiling(p*proprI) # proportion of nodes to intervene on
-  tI <- sample(1:p, numInterv, replace=F)
-  lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
-  nObsv<- propObsSample*totalSample
-  nInterv<-(1-propObsSample)*totalSample/numInterv
-  interventionTargets<- list(nObsv)
-  for(i in tI){
-    interventionTargets<-append(interventionTargets,list(c(nInterv,i)))
-  }
-  return(list(gTrued= g$Directed, gTrues=g$Skeleton, L=lambdaCoeffs, targetsI=interventionTargets))
-}
 
 
 # The next function does simulations with multiple node interventions
@@ -747,7 +693,7 @@ pruferwithskeletonOpt <- function(k){
 }
 
 
-#get edgelist from adjacecncy matrix
+# get edgelist from adjacecncy matrix
 edgelist_toadjmatrix<-function(L){
   n<-dim(L)[1]
   I<-Matrix(nrow=(n+1),ncol=(n+1),data=0,sparse=TRUE)
@@ -776,11 +722,9 @@ I_env<-function(E,interventionTargets){
       }
       if(is.element(E[i,1],interventionTargets[[j]])&&!is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<-1
-        c<-TRUE
       }
       if(!is.element(E[i,1],interventionTargets[[j]])&&is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<--1
-        c<-TRUE
       }
     }
 
