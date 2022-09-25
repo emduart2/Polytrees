@@ -435,6 +435,7 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,checkConse
 #         thres= threshold for independence test 
 #OUTPUT:  oriented=  list of oriented edges
 #         unoriented= list of unoriented edges
+#          Xlist->Covlist
 complete_triplet<-function(p,Covlist,Ilist,Nlist,E,C,thres){
   Trip_out<-triplets(Covlist,Ilist,Nlist,E,C,thres)
   U<-Trip_out$Ulist
@@ -468,14 +469,18 @@ complete_triplet<-function(p,Covlist,Ilist,Nlist,E,C,thres){
 #         Ilist= list of intervened nodes
 #         Nlist= list of sample sizes
 #         E= list of unoriented edges
+#         O= list of already oriented edges  
+#         p= tree size
 #         C= matrix of dependece measures
 #         thres= threshold for independence test 
+#         Xlist->Covlist
 triplets<-function(Covlist,Ilist,Nlist,E,C,thres){
   m<-(nrow(E)+1)
   V_v<-c(1:m)  #list of vertices to "check" i.e possible colliders
   print(V_v)
   UE<-E
   O<-numeric()       
+
   vcheck<-numeric()       #list of already checked vertices
   repeat{
     if(length(V_v)==0){
