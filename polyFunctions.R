@@ -746,51 +746,68 @@ I_env<-function(E,interventionTargets){
 # New version of pairs
 # E = matrix. each row is an edge and each column is a vertex of the edge. these 
 #     are unoriented edges
+# Xs = list of data sets
+# Ilist= list of interventions settings with sample sized
+# alpha = a significance level
+# meth= "min" or "max", p-value method, reject the one with lowest p-value, or accept
+#        the one highest p values.
 pairs<-function(E,Xs,Ilist,alpha,meth="min"){
   O<-c()
   U<-c()
   ndatasets<-length(Ilist)
-  if(length(E)!=0){
+  if(nrow(E)!=0){
     l<-length(Xs)
     IE<-I_env(E,Ilist)
     for(i in c(1:nrow(E))){
       e1<-E[i,1]
       e2<-E[i,2] 
-      Ie1e2<-append(which(IE$Env_matrix[i,]==0),which(IE$Env_matrix[i,]==1)) # indices suitable to test e1 e2
-      Ie2e1<-append(which(IE$Env_matrix[i,]==0),which(IE$Env_matrix[i,]==-1)) # indices suitable to test e2 e1
-      if(length(Ie1e2)>1 & length(Ie2e1)>1){ # In this case we can test both directions
-        Xe1e2 <- vector(mode='list', length=length(Ie1e2)) # list to save the data sets relevant to test the direction e1->e2
-        Xe2e1<- vector(mode='list', length=length(Ie2e1))  # list to save the data sets relevant to test the direction e2->e1
-        for(k in Ie1e2) {Xe1e2<-append(Xe1e2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # the order in of this two columns
-        for(k in Ie2e1) {Xe2e1<-append(Xe2e1,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # matters to perform the test
-        Xe1e2<-Xe1e2[-which(sapply(Xe1e2, is.null))]
-        Xe2e1<-Xe2e1[-which(sapply(Xe2e1, is.null))]
-        o1<- F_test(Xe1e2) # Test e1->e2---
-        o2<- F_test(Xe2e1)  # Test e2->e1
-        if (meth=="min"){
-          if(min(o1)< min(o2)){O<-rbind(O,c(e2,e1))}   # If o1 has the smallest p-value we reject  e1->e1
-          else if(min(o2)<min(o1)){O<-rbind(O,c(e1,e2))}
+      Inoe1noe2<- which(IE$Env_matrix[i,]==0) # indices where neither e1 or e2 were intervened on
+      Ie1noe2<-which(IE$Env_matrix[i,]==1) # indices where e1 is a target but e2 is not
+      Inoe1e2<-which(IE$Env_matrix[i,]==-1) # indices where e2 is a target but e1 is not
+      if(length(Inoe1noe2)>0 & length(Ie1noe2)>0 & length(Inoe1e2)>0){ # In this case we can test both directions
+        Xnoe1noe2<-vector(mode='list', length=length(Inoe1noe2))
+        Xe1noe2 <- vector(mode='list', length=length(Ie1noe2)) # list to save the data sets relevant to test the direction e1->e2
+        Xnoe1e2<- vector(mode='list', length=length(Inoe1e2))  # list to save the data sets relevant to test the direction e2->e1
+        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # the order in of this two columns
+        for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # matters to perform the test
+        for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))}
+        Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
+        Xe1noe2<-Xe1noe2[-which(sapply(Xe1noe2, is.null))]
+        Xnoe1e2<-Xnoe1e2[-which(sapply(Xnoe1e2, is.null))]
+        print("Two tests")
+        p_val_e1e2<-chi_square_test(Xnoe1noe2,Xe1noe2)
+        p_val_e2e1<-chi_square_test(cbind(Xnoe1noe2[,2],Xnoe1noe2[,1]),Xnoe1e2)
+        if (p_val_e1e2 < p_val_e2e1){O<-rbind(O,c(e2,e1))}
+        else if (p_val_e1e2 > p_val_e2e1){O<-rbind(O,c(e1,e2))}
+      }
+      else if(length(Inoe1noe2)>0 & length(Ie1noe2)>0 & length(Inoe1e2)==0){ # Can only use the test for e2->e1
+        Xnoe1noe2<-vector(mode='list', length=length(Inoe1noe2))
+        Xe1noe2 <- vector(mode='list', length=length(Ie1noe2)) # list to save the data sets relevant to test the direction e1->e2
+        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # the order in of this two columns
+        for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} 
+        Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
+        Xe1noe2<-Xe1noe2[-which(sapply(Xe1noe2, is.null))]
+        print("One test eone to etwo")
+        p_val_e1e2<-chi_square_test(Xnoe1noe2,Xe1noe2)
+        if (p_val_e1e2<alpha){O<-rbind(O,c(e2,e1))}
+        else{O<-rbind(O,c(e1,e2))}
+      }
+      else if(length(Inoe1noe2)>0 & length(Ie1noe2)==0 & length(Inoe1e2)>0){
+        Xnoe1noe2<-vector(mode='list', length=length(Inoe1noe2))
+        Xnoe1e2<- vector(mode='list', length=length(Inoe1e2)) 
+        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))}
+        for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))}
+        Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
+        Xnoe1e2<-Xnoe1e2[-which(sapply(Xnoe1e2, is.null))]
+        print("One test etwo to eone")
+        p_val_e2e1<-chi_square_test(cbind(Xnoe1noe2[,2],Xnoe1noe2[,1]),Xnoe1e2)
+        if (p_val_e2e1< alpha){O<-rbind(O,c(e1,e2))}
+        else{O<-rbind(O,c(e2,e1))}
+      }
+      else{
+        U<-rbind(U,c(e1,e2))
+        print("No test")
         }
-        else if (meth=="max"){
-          if(max(o1)< max(o2)){O<-rbind(O,c(e2,e1))}   # If o2 has the hightes p-value we accept  e2->e1
-          else if(max(o2)<max(o1)){O<-rbind(O,c(e1,e2))}
-        }
-      }
-      else if(length(Ie1e2)<2 & length(Ie2e1)>1){ # Can only use the test for e2->e1
-        Xe2e1<- vector(mode='list', length=length(Ie2e1))
-        for(k in Ie2e1) {Xe2e1<-append(Xe2e1,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # order matters to perform the test
-        Xe2e1<-Xe2e1[-which(sapply(Xe2e1, is.null))]
-        o2<-F_test(Xe2e1)
-        if(length(which(o2<alpha/length(Ie2e1)))==0) O<-rbind(O,c(e2,e1)) else O<-rbind(O,c(e1,e2))
-      }
-      else if(length(Ie1e2)>1 & length(Ie2e1)<1){
-        Xe1e2<- vector(mode='list', length=length(Ie1e2))
-        for(k in Ie1e2) {Xe1e2<-append(Xe1e2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e1])))} # order matters to perform the test
-        Xe1e2<-Xe1e2[-which(sapply(Xe1e2, is.null))]
-        o1<-F_test(Xe1e2)
-        if(length(which(o1<alpha/length(Ie1e2)))==0) O<-rbind(O,c(e1,e2)) else O<-rbind(O,c(e2,e1))
-      }
-      else{U<-rbind(U,c(e1,e2))}
     }
   }
   return(list(Olist=O,Ulist=U))
@@ -828,6 +845,35 @@ regCoeff<-function(x,y){
   return(c(a,b))
 }
 #---------------
+chi_square_test<-function(Xobsv,Xint){
+  coeffs<-regCoeff(Xobsv[,1],Xobsv[,2])
+  nint<-length(Xint)
+  Qsum<-c()
+  df<-c() ## degrees of freedom for chi-square distribution
+  for (i in c(1:nint)){
+    XI<-Xint[[i]]
+    D<-matrix(XI[,2]-(coeffs[1]+coeffs[2]*XI[,1]),nrow=nrow(XI), ncol= 1)
+    nI<-nrow(XI)
+    XI<-matrix(cbind(rep(1,nrow(XI)),XI[,1]),nrow=nrow(XI),ncol=2)
+    XO<-matrix(cbind(rep(1,nrow(Xobsv)),Xobsv[,1]),nrow=nrow(Xobsv),ncol=2)
+    SigmaD<- XI%*%solve(t(XO)%*%XO)%*%t(XI) +diag(1,nrow=nI)
+    Q<-t(D)%*%SigmaD%*%D
+    Qsum<-cbind(Qsum,Q)
+    df<-append(df,nI)
+  }
+  c_val<-sum(Qsum)
+  df<-sum(df)
+  p_val<-pchisq(c_val,df,lower.tail = FALSE)
+  print(p_val)
+  return(p_val)
+}
+D<-matrix(Ye-(regCoeffNotI[1]+regCoeffNotI[2]*Xe),nrow = nrow(Ye),ncol=1)
+ne<-nrow(Xe)
+nenot<-nrow(Xenot)
+SigmaD<- Xe%*%solve(t(Xenot)%*%Xenot)%*%t(Xe) +diag(1,nrow=ne) #+  # Xe%*%solve(t(Xenot)%*%Xenot)%*%t(Xe)
+sigmahatYnote<-var(Yenot[,2]-(regCoeffNotI[1]+regCoeffNotI[2]*Xenot[,2]))
+print(coeffs)
+#-------------
 
 ##Function that computes the i-cpdag
 #INPUT:   Ilist= list of interventional settings
