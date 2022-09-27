@@ -790,7 +790,7 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
         print("One test eone to etwo")
         p_val_e1e2<-chi_square_test(Xnoe1noe2,Xe1noe2)
         if (p_val_e1e2<alpha){O<-rbind(O,c(e2,e1))}
-        else{O<-rbind(O,c(e1,e2))}
+        else{U<-rbind(U,c(e1,e2))}
       }
       else if(length(Inoe1noe2)>0 & length(Ie1noe2)==0 & length(Inoe1e2)>0){
         Xnoe1noe2<-vector(mode='list', length=length(Inoe1noe2))
@@ -802,7 +802,7 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
         print("One test etwo to eone")
         p_val_e2e1<-chi_square_test(cbind(Xnoe1noe2[,2],Xnoe1noe2[,1]),Xnoe1e2)
         if (p_val_e2e1< alpha){O<-rbind(O,c(e1,e2))}
-        else{O<-rbind(O,c(e2,e1))}
+        else{U<-rbind(U,c(e2,e1))}
       }
       else{
         U<-rbind(U,c(e1,e2))
