@@ -1,12 +1,14 @@
 ##Orientation testing 
 
+##Orientation testing 
+
 nndatasets<-c(3:5)
-iss<-c(3)
+iss<-c(3:6)
 sdatasets<-c()
-totalSamples<-c(10000)
-p<-100
-k<-10
-SHD_true_skeleton<-SHD_estimated_skeleton<-array(0,c(length(nndatasets),
+totalSamples<-c(100,1000,10000)
+p<-20
+k<-20
+SHD_1<-SHD_2<-SHD_2_simp<-SHD_3<-array(0,c(length(nndatasets),
                                                          length(iss),length(totalSamples),k))
 for(ss in c(1:length(totalSamples))){
   for(ii in c(1:length(iss))){
@@ -15,6 +17,7 @@ for(ss in c(1:length(totalSamples))){
         IS<-isetting(p,nndatasets[nn],iss[ii],sdatasets,totalSamples[ss])
         G<-graph_from_adjacency_matrix(IS$gTrued)
         ID<-interventionalData(G,IS$L,IS$targetsI)
+        Covlist<-ID$Covs
         Xlist<-ID$Xs
         Ilist<-IS$targetsI
         Nlist<-ID$Ns      
@@ -32,23 +35,36 @@ for(ss in c(1:length(totalSamples))){
         meanC<-wmeanCorrels(C_list,ID$Ns)$Rmean
         CL<-chowLiu(meanC)
         E_e<-get.edgelist(CL)
+
+       
+        ##Orientation with original skeleton strategy 1
+        dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E_e,lC,thres)
+        dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
+        i_cpdag_adj<-i_cpdag(Ilist,dag_adj)
+        i_cpdag_graph<-as(i_cpdag_adj,"graphNEL")
         
-        ##Orientation with estimated skeleton
-        e_s_dag_list<-complete_triplet(p,Xlist,Ilist,Nlist,E_e,lC,thres)
-        e_s_dag_adj<-cpdag_from_lists(e_s_dag_list$oriented,e_s_dag_list$unotiented,p)
-        e_s_i_cpdag_adj<-i_cpdag(Ilist,e_s_dag_adj)
-        e_s_i_cpdag<-as(e_s_i_cpdag_adj,"graphNEL")
+        SHD_1[nn,ii,ss,kk]<-shd(true_i_cpdag,i_cpdag_graph)/(sum(true_i_cpdag_adj)+sum(i_cpdag_adj))
         
-        SHD_estimated_skeleton[nn,ii,ss,kk]<-shd(true_i_cpdag,e_s_i_cpdag)/(sum(true_i_cpdag_adj)+sum(e_s_i_cpdag_adj))
+        ##Orientation with original skeleton strategy 2
+        dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple")
+        dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
+        i_cpdag_graph<-as(dag_adj,"graphNEL")
         
+        SHD_2_simp[nn,ii,ss,kk]<-shd(true_i_cpdag,i_cpdag_graph)/(sum(true_i_cpdag_adj)+sum(i_cpdag_adj))
         
-        ##Orientation with original skeleton
-        o_s_dag_list<-complete_triplet(p,Xlist,Ilist,Nlist,E,lC,thres)
-        o_s_dag_adj<-cpdag_from_lists(o_s_dag_list$oriented,o_s_dag_list$unoriented,p)
-        o_s_i_cpdag_adj<-i_cpdag(Ilist,o_s_dag_adj)
-        o_s_i_cpdag<-as(e_s_i_cpdag_adj,"graphNEL")
+        dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E,p,method="nothing")
+        dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
+        i_cpdag_graph<-as(dag_adj,"graphNEL")
         
-        SHD_true_skeleton[nn,ii,ss,kk]<-shd(true_i_cpdag,o_s_i_cpdag)/(sum(true_i_cpdag_adj)+sum(o_s_i_cpdag_adj))
+        SHD_2[nn,ii,ss,kk]<-shd(true_i_cpdag,i_cpdag_graph)/(sum(true_i_cpdag_adj)+sum(i_cpdag_adj))
+        
+        ##Orientation with original skeleton strategy 3
+        dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E_e,p)
+        dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
+        i_cpdag_adj<-i_cpdag(Ilist,dag_adj)
+        i_cpdag_graph<-as(i_cpdag_adj,"graphNEL")
+        
+        SHD_3[nn,ii,ss,kk]<-shd(true_i_cpdag,i_cpdag_graph)/(sum(true_i_cpdag_adj)+sum(i_cpdag_adj))
       }
     }
   }
