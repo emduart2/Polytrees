@@ -152,7 +152,9 @@ chowLiu<-function(R){
 #               Yang et al. 2018. Possible strings: "random"=random coefficient,
 #               "perfect"= coefficient set to 0, "imperfect"=coefficient set to 
 #               0 with probability 0.5, "inhibitory"=coefficient*0.1
-#OUTPUT: A list with four sublist,
+#OUTPUT: A list with five sublist,
+#       Covs= This is a list of covariance matrices
+#              obtained from the interventional experiments.
 #       Rs = This is a list of correlation matrices
 #              obtained from the interventional experiments.
 #       Ls = This is a list of coefficient matrices with the values
@@ -164,6 +166,7 @@ chowLiu<-function(R){
 interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"){
   p<-nrow(L)
   ndatasets<-length(interventionTargets)
+  Covlist<-list()
   Rlist<-list()
   Llist<-list()
   Xlist<-list()
@@ -201,13 +204,15 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
       }
     }
     XI<-samplingDAG(nI,LI)
-    RI<-list(sample.cor(XI))
-    Rlist<-append(Rlist,RI)
+    CovI<-sample.cov(XI)
+    RI<-cov2cor(CovI)
+    Covlist<-append(Covlist,list(CovI))
+    Rlist<-append(Rlist,list(RI))
     Llist<-append(Llist,list(LI))
     nList<-append(nList,nI)
     Xlist<-append(Xlist,list(XI))
   }
-  RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList,Xs=Xlist)
+  RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList,Xs=Xlist,Covs=Covlist)
   return(RLlist)
 }
 #Imatrix
@@ -280,62 +285,8 @@ wmeanCorrels<-function(corrIs,nIs){
 }
 
 
-#-----
-# This function takes and id=identifier, a graph G and a
-# set of intervention targets. 
-# The set of intervention targets contains sample sizes for each experiment
-# and the targeted nodes.
-# The output of this function is a collection
-# of undirected graphs together with the SHD between the 
-# true graph and the one learned by Chow-Liu. 
-# Three learning algorithms are considered here using
-# Chow-Liu with three different weight matrices, using
-# an observed correlation matrix, a weighted median and a weighted mean
-# the ONE in the name refers to the fact that this function does the
-# learning for one instance of a dag a coefficient matrix and a set of
-# intervention targets.
-testLearningONE<-function(id,G,L,interventionTargets){
-  intervExps<-interventionalData(G,L,interventionTargets)
-  R1<-intervExps$Rs[[1]] # Observed correlations
-  R2<-wmeanCorrels(intervExps$Rs,intervExps$Ns) # weighted mean Correls
-  R3<-wmedianCorrels(intervExps$Rs,intervExps$Ns) # weighted median Correls
-  G1<-chowLiu(R1)
-  G2<-chowLiu(R2$Rmean)
-  G3<-chowLiu(R3$Rmedian)
-  I1<- as_adjacency_matrix(G1)
-  I2<- as_adjacency_matrix(G2)
-  I3<- as_adjacency_matrix(G3)
-  gTrue <- graph_from_edgelist( as_edgelist(G), directed = FALSE)
-  Itrue <- as_adjacency_matrix(gTrue)
-  p <- nrow(R1)
-  SHDG1 <- sum(abs((Itrue-I1)))/(2*(p-1)) # compute structural Hamming distance for each learned graph
-  SHDG2 <- sum(abs((Itrue-I2)))/(2*(p-1))
-  SHDG3 <- sum(abs((Itrue-I3)))/(2*(p-1))
-  return(list(Gobsv=G1, Gmean=G2, Gmedian=G3,shd1=SHDG1,shd2=SHDG2,shd3=SHDG3))  
-}
 
 
-
-# The next function does simulations with single node interventions
-# This function generates a DAG, a list of intervention targets 
-# with corresponding sample sizes and a matrix L of coefficients
-# INPUT:  p = number of nodes in the dag
-#        proprI = percentage of nodes that will get a single target intervention
-#        propObsSample= proportion of the samples in the Observed experiment.
-#        totalSample = sum of the sample sizes of all interventional and obsv. experiments
-interventionalSetting<-function(p,proprI,propObsSample,totalSample){
-  g<-pruferwithskeletonOpt(p)
-  numInterv<- ceiling(p*proprI) # proportion of nodes to intervene on
-  tI <- sample(1:p, numInterv, replace=F)
-  lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
-  nObsv<- propObsSample*totalSample
-  nInterv<-(1-propObsSample)*totalSample/numInterv
-  interventionTargets<- list(nObsv)
-  for(i in tI){
-    interventionTargets<-append(interventionTargets,list(c(nInterv,i)))
-  }
-  return(list(gTrued= g$Directed, gTrues=g$Skeleton, L=lambdaCoeffs, targetsI=interventionTargets))
-}
 
 
 # The next function does simulations with multiple node interventions
@@ -422,7 +373,7 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,checkConse
 #Functions to learn the CPDAG
 
 #Performs procedure 1 of section 5.2
-#INPUT:   Xlist= list of samples
+#INPUT:   Covlist= list of covariance matrices
 #         Ilist= list of intervened nodes
 #         Nlist= list of sample sizes
 #         E= list of unoriented edges
@@ -430,8 +381,9 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,checkConse
 #         thres= threshold for independence test 
 #OUTPUT:  oriented=  list of oriented edges
 #         unoriented= list of unoriented edges
-complete_triplet<-function(p,Xlist,Ilist,Nlist,E,C,thres){
-  Trip_out<-triplets(Xlist,Ilist,Nlist,E,C,thres)
+#          Xlist->Covlist
+complete_triplet<-function(p,Covlist,Ilist,Nlist,E,C,thres){
+  Trip_out<-triplets(Covlist,Ilist,Nlist,E,C,thres)
   U<-Trip_out$Ulist
   O<-Trip_out$Olist
   repeat{
@@ -451,27 +403,30 @@ complete_triplet<-function(p,Xlist,Ilist,Nlist,E,C,thres){
     IDvertices<-dir_ident_vert(TBO,d)
     
     
-    P_List<-aftercollider_test(Xlist,Ilist,Nlist,TBO,IDvertices)
+    P_List<-aftercollider_test(Covlist,Ilist,Nlist,TBO,IDvertices)
     O<-rbind(O,P_List$o_edges)
     
   }
   return(list(oriented=O,unoriented=U))
 }
 
-
 #Performs the first part of procedure 1 of section 5.2
-#INPUT:   Xlist= list of samples
+#INPUT:   Covlist= list of covariance matrices
 #         Ilist= list of intervened nodes
 #         Nlist= list of sample sizes
 #         E= list of unoriented edges
+#         O= list of already oriented edges  
+#         p= tree size
 #         C= matrix of dependece measures
 #         thres= threshold for independence test 
-triplets<-function(Xlist,Ilist,Nlist,E,C,thres){
+#         Xlist->Covlist
+triplets<-function(Covlist,Ilist,Nlist,E,C,thres){
   m<-(nrow(E)+1)
   V_v<-c(1:m)  #list of vertices to "check" i.e possible colliders
   print(V_v)
   UE<-E
   O<-numeric()       
+
   vcheck<-numeric()       #list of already checked vertices
   repeat{
     if(length(V_v)==0){
@@ -505,7 +460,7 @@ triplets<-function(Xlist,Ilist,Nlist,E,C,thres){
       }
       if((length(Li)>0)&(l>0)){   #if there are edges pointing towards v, and unoriented edges containig v orient the unoriented edges.
         e<-O[Li[1],]  
-        O<-withincoming(Xlist,Ilist,Nlist,e,v,Lu1,Lu2,O,UE)   #updated list of oriented edges
+        O<-withincoming(Covlist,Ilist,Nlist,e,v,Lu1,Lu2,O,UE)   #updated list of oriented edges
         vcheck<-append(vcheck,i)
         update<-TRUE
         vupdate<-TRUE
@@ -578,9 +533,9 @@ simpleitest<-function(C,i,j,k,thres){
 
 #Performs the likelihood test in 5.2 
 #return 1 if u is a collider and 0 otherwise
-tripletlikelihood<-function(Xlist,Ilist,Nlist,u,v,w){
-  a<-tripletlikelihood_coll(Xlist,Ilist,Nlist,u,v,w)
-  b<-tripletlikelihood_noncoll(Xlist,Ilist,Nlist,u,v,w)
+tripletlikelihood<-function(Covlist,Ilist,Nlist,u,v,w){
+  a<-tripletlikelihood_coll(Covlist,Ilist,Nlist,u,v,w)
+  b<-tripletlikelihood_noncoll(Covlist,Ilist,Nlist,u,v,w)
   if(a>b){
     return(1)
   }else{
@@ -591,25 +546,25 @@ tripletlikelihood<-function(Xlist,Ilist,Nlist,u,v,w){
 #takes as input a list the correlation matrix, an oriented edge, a vertex v, the wo lists of edges containing v, 
 #the lists of oriented/unoriented edges and a threshold
 #gives as output the updated list of oriented edges
-withincoming<-function(Xlist,Ilist,Nlist,e,v,Lu1,Lu2,O,UE){
+withincoming<-function(Covlist,Ilist,Nlist,e,v,Lu1,Lu2,O,UE){
   d<-matrix(0,nrow = length(Lu1)+length(Lu2),ncol=1) 
   if(length(Lu1)>0){
     for(j in c(1:length(Lu1))){
       if(length(UE)>2){
-        d[j]<-tripletlikelihood(Xlist,Ilist,Nlist,e[1],v,UE[Lu1[j],2])
+        d[j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[Lu1[j],2])
       }
       else{
-        d[j]<-tripletlikelihood(Xlist,Ilist,Nlist,e[1],v,UE[2])
+        d[j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[2])
       }
     }
   }
   if(length(Lu2)>0){
     for(j in c(1:length(Lu2))){
       if(length(UE)>2){
-        d[length(Lu1)+j]<-tripletlikelihood(Xlist,Ilist,Nlist,e[1],v,UE[Lu2[j],1])
+        d[length(Lu1)+j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[Lu2[j],1])
       }
       else{
-        d[length(Lu1)+j]<-tripletlikelihood(Xlist,Ilist,Nlist,e[1],v,UE[1])
+        d[length(Lu1)+j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[1])
       }
     }
   }
@@ -687,6 +642,155 @@ withlist<-function(Lu1,Lu2,O,UE,d){
   return(O)
 }
 
+  
+# Function that implements strategy 3 in section 5.2
+#INPUT:   Covlist= list of covariance matrices
+#         Ilist= list of intervened nodes
+#         Nlist= list of sample sizes
+#         E= list of unoriented edges
+#         C= matrix of dependece measures
+#         thres= threshold for independence test
+#         p= size of the tree
+#OUTPUT:  oriented=  list of oriented edges
+#         unoriented= list of unoriented edges
+
+
+dir_i_or_first<-function(Covlist,Ilist,Nlist,C,thres,E,p){
+  d<-dir_ident_edges(Ilist,E)
+  O<-c()
+  for(i in c(1:length(d))){
+    if(d[i]==1){
+      a<-pairlikelihood(Covlist,Ilist,Nlist,E[i,1],E[i,2])
+      b<-pairlikelihood(Covlist,Ilist,Nlist,E[i,2],E[i,1])
+      if(a>b){
+        O<-rbind(O,E[i,])
+      }else{
+        O<-rbind(O,rev(E[i,]))
+      }
+    }
+  }
+  E<-matrix(E,ncol=2)
+  E<-E[-which(d==1),]
+  E<-matrix(E,ncol=2)
+  Trip_out<-triplets(Covlist,Ilist,Nlist,E,O,p,C,thres)
+  E<-Trip_out$Ulist
+  O<-Trip_out$Olist
+  return(list(oriented=O,unoriented=E))
+}
+
+
+#Function that implements strategy 2 in section 5.2
+#INPUT:   Covlist= list of covariance matrices
+#         Ilist= list of intervened nodes
+#         Nlist= list of sample sizes
+#         E= list of unoriented edges
+#         C= matrix of dependece measures
+#         thres= threshold for independence test
+#         p= size of the tree
+#         method= "simple" if you want to do the collider test as in 5.1  
+#OUTPUT:  oriented=  list of oriented edges
+#         unoriented= list of unoriented edges
+
+complete_alternating<-function(Covlist,Ilist,Nlist,C,thres,E,p,method){
+  alt_out<-alternating(Covlist,Ilist,Nlist,C,E,p,thres,method)
+  U<-alt_out$unoriented
+  O<-alt_out$oriented
+  if(length(U)!=0){
+    trip_out<-triplets(Covlist,Ilist,Nlist,U,c(),p,C,thres)
+    U<-trip_out$unoriented
+    O<-rbind(O,trip_out$oriented)
+  }
+  return(list(unoriented=U,oriented=O))
+}
+
+
+alternating<-function(Covlist,Ilist,Nlist,C,E,p,thres,method){
+  TOUSE<-numeric()
+  O<-numeric()
+  repeat{
+    if(length(TOUSE)==0){
+      E<-matrix(E,ncol=2)
+      index<-first_dir_id_edge(Ilist,E)
+       if(index!=0){
+        a<-pairlikelihood(Covlist,Ilist,Nlist,E[index,1],E[index,2])
+        b<-pairlikelihood(Covlist,Ilist,Nlist,E[index,2],E[index,1])
+        if(a>b){
+          o<-E[index,]
+          O<-rbind(O,o)
+        }else{
+          o<-rev(E[index,])
+          O<-rbind(O,o)
+        }
+      }else{
+        return(list(unoriented=E,oriented=O))
+        break
+      }
+      E<-E[-index,]
+      E<-matrix(E,ncol=2)
+      if(length(E)==0){
+        return(list(unoriented=E,oriented=O))
+        break
+      }
+    }
+    else{
+      TOUSE<-matrix(TOUSE,ncol=2)
+      o<-TOUSE[1,]
+      TOUSE<-TOUSE[-1,]
+    }
+    if(length(E)!=0){
+      E<-matrix(E,ncol=2)
+      l1<-which(E[,1]==o[2])
+      l2<-which(E[,2]==o[2])
+      for(i in l2){
+        E[i,]<-rev(E[i,])
+      }
+      l<-append(l1,l2)
+      E_o<-matrix(E[l,],ncol=2)
+      if(length(E_o)==0){
+      }
+      else{
+        E<-E[-l,]
+        for(i in c(1:(length(E_o)/2))){
+          if(method=="simple"){
+            outcome<-simpleitest(C,o[1],o[2],E_o[i,2],thres)
+          }else{
+            outcome<-tripletlikelihood(Covlist,Ilist,Nlist,o[1],o[2],E_o[i,2])
+          }
+          if(outcome==1){
+            O<-rbind(O,rev(E_o[i,]))
+          }
+          else{
+            O<-rbind(O,E_o[i,])
+            TOUSE<-rbind(TOUSE,E_o[i,])
+          }
+        }
+      }
+    }
+    else{
+      return(list(unoriented=E,oriented=O))
+      break
+    }
+  }
+}
+
+
+first_dir_id_edge<-function(Ilist,E){
+  E<-matrix(E,ncol=2)
+  if(length(E)==0){
+    return(0)
+  }
+  for(i in c(1:length(E[,1]))){
+    for(j in c(1:length(Ilist))){
+      if(length(intersect(Ilist[[j]][-1],E[i,]))==1){
+        return(i)
+        break
+      }
+    }
+  }
+  return(0)
+}
+ 
+ 
 ##Auxiliary Functions
 
 #Weight Matrix
@@ -747,7 +851,7 @@ pruferwithskeletonOpt <- function(k){
 }
 
 
-#get edgelist from adjacecncy matrix
+# get edgelist from adjacecncy matrix
 edgelist_toadjmatrix<-function(L){
   n<-dim(L)[1]
   I<-Matrix(nrow=(n+1),ncol=(n+1),data=0,sparse=TRUE)
@@ -776,11 +880,9 @@ I_env<-function(E,interventionTargets){
       }
       if(is.element(E[i,1],interventionTargets[[j]])&&!is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<-1
-        c<-TRUE
       }
       if(!is.element(E[i,1],interventionTargets[[j]])&&is.element(E[i,2],interventionTargets[[j]])){
         Env_mat[i,j]<--1
-        c<-TRUE
       }
     }
 
@@ -845,6 +947,7 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
         for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} 
         Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
         Xe1noe2<-Xe1noe2[-which(sapply(Xe1noe2, is.null))]
+
         print("One test e1 to e2")
         p_vals_t1<-c()
         for(i in c(1:length(Xe1noe2))){ # These are the p_values to test e1->e2
@@ -872,6 +975,7 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
         c<-which(p_vals_t2<alpha/length(Inoe1e2))
         if (length(c)==0){U<-rbind(U,c(e1,e2))}
         else {O<-rbind(O,c(e1,e2))}
+
       }
       else{
         U<-rbind(U,c(e1,e2))
