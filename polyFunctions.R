@@ -811,45 +811,67 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
       Inoe1noe2<- which(IE$Env_matrix[i,]==0) # indices where neither e1 or e2 were intervened on
       Ie1noe2<-which(IE$Env_matrix[i,]==1) # indices where e1 is a target but e2 is not
       Inoe1e2<-which(IE$Env_matrix[i,]==-1) # indices where e2 is a target but e1 is not
+      Xnoe1noe2<-vector(mode='list', length=length(Inoe1noe2))
+      Xe1noe2 <- vector(mode='list', length=length(Ie1noe2)) # list to save the data sets relevant to test the direction e1->e2
+      Xnoe1e2<- vector(mode='list', length=length(Inoe1e2))  # list to save the data sets relevant to test the direction e2->e1
+      p_vals_t1<-c()
+      p_vals_t2<-c()
       if(length(Inoe1noe2)>0 & length(Ie1noe2)>0 & length(Inoe1e2)>0){ # In this case we can test both directions
-        Xnoe1noe2<-vector(mode='list', length=length(Inoe1noe2))
-        Xe1noe2 <- vector(mode='list', length=length(Ie1noe2)) # list to save the data sets relevant to test the direction e1->e2
-        Xnoe1e2<- vector(mode='list', length=length(Inoe1e2))  # list to save the data sets relevant to test the direction e2->e1
-        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # the order in of this two columns
-        for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # matters to perform the test
-        for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))}
+        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # the order in of these two columns
+        for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # matters to perform the test e1 is indp var, e2 is dep
+        for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # here e2 is ind, e1 is the dep
         Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
         Xe1noe2<-Xe1noe2[-which(sapply(Xe1noe2, is.null))]
         Xnoe1e2<-Xnoe1e2[-which(sapply(Xnoe1e2, is.null))]
         print("Two tests")
-        p_val_e1e2<-chi_square_test(Xnoe1noe2,Xe1noe2)
-        p_val_e2e1<-chi_square_test(cbind(Xnoe1noe2[,2],Xnoe1noe2[,1]),Xnoe1e2)
-        if (p_val_e1e2 < p_val_e2e1){O<-rbind(O,c(e2,e1))}
-        else if (p_val_e1e2 > p_val_e2e1){O<-rbind(O,c(e1,e2))}
+        for(i in c(1:length(Xe1noe2))){ # These are the p_values to test e1->e2
+          p_val<-F_test(Xnoe1noe2,Xe1noe2[[i]])
+          p_vals_t1<-cbind(p_vals_t1,p_val)
+        }
+        for(i in c(1:length(Xnoe1e2))){ # These are the p_values to test e2->e1
+          p_val<-F_test(cbind(Xnoe1noe2[,2],Xnoe1noe2[,1]),Xnoe1e2[[i]])
+          p_vals_t2<-cbind(p_vals_t2,p_val)
+        }
+        print(length(p_vals_t1))
+        print(length(p_vals_t2))
+        mint1<-min(p_vals_t1)
+        mint2<-min(p_vals_t2)
+        if(mint1<mint2 & mint1<alpha/length(Ie1noe2)){O<-rbind(O,c(e2,e1))}
+        else if (mint2<mint1 & mint2<alpha/length(Inoe1e2) ){O<-rbind(O,c(e1,e2))}
+        else{U<-rbind(U,c(e1,e2))}
       }
-      else if(length(Inoe1noe2)>0 & length(Ie1noe2)>0 & length(Inoe1e2)==0){ # Can only use the test for e2->e1
-        Xnoe1noe2<-vector(mode='list', length=length(Inoe1noe2))
-        Xe1noe2 <- vector(mode='list', length=length(Ie1noe2)) # list to save the data sets relevant to test the direction e1->e2
+      else if(length(Inoe1noe2)>0 & length(Ie1noe2)>0 & length(Inoe1e2)==0){ # Can only use the test for e1->e2
         for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # the order in of this two columns
-        for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} 
+        for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} 
         Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
         Xe1noe2<-Xe1noe2[-which(sapply(Xe1noe2, is.null))]
-        print("One test eone to etwo")
-        p_val_e1e2<-chi_square_test(Xnoe1noe2,Xe1noe2)
-        if (p_val_e1e2<alpha){O<-rbind(O,c(e2,e1))}
-        else{O<-rbind(O,c(e1,e2))}
+        print("One test e1 to e2")
+        p_vals_t1<-c()
+        for(i in c(1:length(Xe1noe2))){ # These are the p_values to test e1->e2
+          p_val<-F_test(Xnoe1noe2,Xe1noe2[[i]])
+          p_vals_t1<-cbind(p_vals_t1,p_val)
+        }
+        c<-which(p_vals_t1<  alpha/length(Ie1noe2))
+        print("C info")
+        print(length(c))
+        if (length(c)==0){U<-rbind(U,c(e1,e2))}
+        else {O<-rbind(O,c(e2,e1))}
       }
-      else if(length(Inoe1noe2)>0 & length(Ie1noe2)==0 & length(Inoe1e2)>0){
-        Xnoe1noe2<-vector(mode='list', length=length(Inoe1noe2))
-        Xnoe1e2<- vector(mode='list', length=length(Inoe1e2)) 
-        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))}
+      else if(length(Inoe1noe2)>0 & length(Ie1noe2)==0 & length(Inoe1e2)>0){ # Can only use the test for e2->e1
+        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # The swap of the columns is here
         for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))}
         Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
         Xnoe1e2<-Xnoe1e2[-which(sapply(Xnoe1e2, is.null))]
-        print("One test etwo to eone")
-        p_val_e2e1<-chi_square_test(cbind(Xnoe1noe2[,2],Xnoe1noe2[,1]),Xnoe1e2)
-        if (p_val_e2e1< alpha){O<-rbind(O,c(e1,e2))}
-        else{O<-rbind(O,c(e2,e1))}
+        print("One test e2 to e1")
+        p_vals_t2<-c()
+        for(i in c(1:length(Xnoe1e2))){ # These are the p_values to test e2->e1
+          p_val<-F_test(Xnoe1noe2,Xnoe1e2[[i]])
+          p_vals_t2<-cbind(p_vals_t2,p_val)
+        }
+        print(p_vals_t2)
+        c<-which(p_vals_t2<alpha/length(Inoe1e2))
+        if (length(c)==0){U<-rbind(U,c(e1,e2))}
+        else {O<-rbind(O,c(e1,e2))}
       }
       else{
         U<-rbind(U,c(e1,e2))
@@ -892,35 +914,35 @@ regCoeff<-function(x,y){
   return(c(a,b))
 }
 #---------------
-chi_square_test<-function(Xobsv,Xint){
-  coeffs<-regCoeff(Xobsv[,1],Xobsv[,2])
-  nint<-length(Xint)
-  Qsum<-c()
-  df<-c() ## degrees of freedom for chi-square distribution
-  for (i in c(1:nint)){
-    XI<-Xint[[i]]
-    D<-matrix(XI[,2]-(coeffs[1]+coeffs[2]*XI[,1]),nrow=nrow(XI), ncol= 1)
-    nI<-nrow(XI)
-    XI<-matrix(cbind(rep(1,nrow(XI)),XI[,1]),nrow=nrow(XI),ncol=2)
-    XO<-matrix(cbind(rep(1,nrow(Xobsv)),Xobsv[,1]),nrow=nrow(Xobsv),ncol=2)
-    SigmaD<- XI%*%solve(t(XO)%*%XO)%*%t(XI) +diag(1,nrow=nI)
-    Q<-t(D)%*%SigmaD%*%D
-    Qsum<-cbind(Qsum,Q)
-    df<-append(df,nI)
-  }
-  c_val<-sum(Qsum)
-  df<-sum(df)
-  p_val<-pchisq(c_val,df,lower.tail = FALSE)
+#---- F_test -- Based on Chow's test 1960
+#------
+# If F_test receives Xe1e2 it means we test e1->e2 i.e if e1 is a causal predictor for e2
+# If F_test receives Xe2e1 it means we test e2->e1
+# INPUT: This function receives a list of data sets with two columns. To test the
+# hypothesis that the first column c1 is a parent of the second column c2 using comparison
+# of regression coefficients.
+# Test c1->c2. 
+# OUTPUT: A list of p-values
+F_test<-function(Xobsv,Xint){
+  n<-length(Xobsv)
+  Xi<-matrix(cbind(rep(1,nrow(Xint)),Xint[,1]),nrow=nrow(Xint),ncol=2) # 
+  Xo<-matrix(cbind(rep(1,nrow(Xobsv)),Xobsv[,1]),nrow=nrow(Xobsv),ncol=2)
+  Yi<-matrix(cbind(rep(1,nrow(Xint)),Xint[,2]),nrow=nrow(Xint),ncol=2)
+  Yo<-matrix(cbind(rep(1,nrow(Xobsv)),Xobsv[,2]),nrow=nrow(Xobsv),ncol=2)
+  regCoeffObsv<-regCoeff(Xo[,2],Yo[,2]) # OLS estimator computed on Xobsv
+  D<-matrix(Yi[,2]-(regCoeffObsv[1]+regCoeffObsv[2]*Xi[,2]),nrow = nrow(Yi),ncol=1)
+  nI<-nrow(Xi)
+  nO<-nrow(Xo)
+  SigmaD<- Xi%*%solve(t(Xo)%*%Xo)%*%t(Xi) +diag(1,nrow=nI) # covariance matrix of D
+  sigmahatYo<-var(Yo[,2]-(regCoeffObsv[1]+regCoeffObsv[2]*Xo[,2]))
+  Q<-t(D)%*%solve(SigmaD)%*%D/(sigmahatYo*nI)
+  p_val<-pf(Q,nI,nO-2, lower.tail=FALSE,log.p = FALSE)
+  print("This is a pvalue")
   print(p_val)
   return(p_val)
 }
-D<-matrix(Ye-(regCoeffNotI[1]+regCoeffNotI[2]*Xe),nrow = nrow(Ye),ncol=1)
-ne<-nrow(Xe)
-nenot<-nrow(Xenot)
-SigmaD<- Xe%*%solve(t(Xenot)%*%Xenot)%*%t(Xe) +diag(1,nrow=ne) #+  # Xe%*%solve(t(Xenot)%*%Xenot)%*%t(Xe)
-sigmahatYnote<-var(Yenot[,2]-(regCoeffNotI[1]+regCoeffNotI[2]*Xenot[,2]))
-print(coeffs)
-#-------------
+#--------- end of F_test
+
 
 ##Function that computes the i-cpdag
 #INPUT:   Ilist= list of interventional settings
@@ -996,45 +1018,6 @@ i_cpdag<-function(Ilist,A){
   }
 }
 
-#---- F_test -- Based on Chow's test 1960
-#------
-# If F_test receives Xe1e2 it means we test e1->e2 i.e if e1 is a causal predictor for e2
-# If F_test receives Xe2e1 it means we test e2->e1
-# INPUT: This function receives a list of data sets with two columns. To test the
-# hypothesis that the first column c1 is a parent of the second column c2 using comparison
-# of regression coefficients.
-# Test c1->c2. 
-# OUTPUT: A list of p-values
-F_test<-function(Xlist){
-  n<-length(Xlist)
-  pvals<-c()
-  for (i in c(1:length(Xlist))){
-    XnotI<-groupD(Xlist[-i]) # data set that doesnt have the i-th sample
-    XI<-Xlist[[i]] # data set for the sample I
-    Xe<-matrix(cbind(rep(1,nrow(XI)),XI[,1]),nrow=nrow(XI),ncol=2)
-    Xenot<-matrix(cbind(rep(1,nrow(XnotI)),XnotI[,1]),nrow=nrow(XnotI),ncol=2)
-    Ye<-matrix(cbind(rep(1,nrow(XI)),XI[,2]),nrow=nrow(XI),ncol=2)
-    Yenot<-matrix(cbind(rep(1,nrow(XnotI)),XnotI[,2]),nrow=nrow(XnotI),ncol=2)
-    regCoeffNotI<-regCoeff(Xenot[,2],Yenot[,2]) # OLS estimator computed on Ie
-    #print(regCoeffNotI)
-    D<-matrix(Ye-(regCoeffNotI[1]+regCoeffNotI[2]*Xe),nrow = nrow(Ye),ncol=1)
-    ne<-nrow(Xe)
-    nenot<-nrow(Xenot)
-    SigmaD<- Xe%*%solve(t(Xenot)%*%Xenot)%*%t(Xe) +diag(1,nrow=ne) #+  # Xe%*%solve(t(Xenot)%*%Xenot)%*%t(Xe)
-    sigmahatYnote<-var(Yenot[,2]-(regCoeffNotI[1]+regCoeffNotI[2]*Xenot[,2]))
-    Q<-t(D)%*%SigmaD%*%D/(sigmahatYnote*nrow(Xe))
-    p_val<-pf(Q,ne,nenot-2, lower.tail=FALSE,log.p = FALSE)
-    #print("This is a pvalue")
-    #print(p_val)
-    pvals<-cbind(pvals,c(p_val))
-    #print(c(nrow(D),nrow(SigmaD),nrow(Xe),nrow(XI),Q,sigmahatXnote,p_val))
-    #if (p_val< bfcorrection){
-    #  return(0) # reject c1->c2
-    #}
-  }
-  return(pvals) # do not reject c2->c1
-}
-#--------- end of F_test
 #----------------------------------
 ##<<<<<<< HEAD
 
