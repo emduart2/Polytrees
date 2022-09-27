@@ -642,6 +642,155 @@ withlist<-function(Lu1,Lu2,O,UE,d){
   return(O)
 }
 
+  
+# Function that implements strategy 3 in section 5.2
+#INPUT:   Covlist= list of covariance matrices
+#         Ilist= list of intervened nodes
+#         Nlist= list of sample sizes
+#         E= list of unoriented edges
+#         C= matrix of dependece measures
+#         thres= threshold for independence test
+#         p= size of the tree
+#OUTPUT:  oriented=  list of oriented edges
+#         unoriented= list of unoriented edges
+
+
+dir_i_or_first<-function(Covlist,Ilist,Nlist,C,thres,E,p){
+  d<-dir_ident_edges(Ilist,E)
+  O<-c()
+  for(i in c(1:length(d))){
+    if(d[i]==1){
+      a<-pairlikelihood(Covlist,Ilist,Nlist,E[i,1],E[i,2])
+      b<-pairlikelihood(Covlist,Ilist,Nlist,E[i,2],E[i,1])
+      if(a>b){
+        O<-rbind(O,E[i,])
+      }else{
+        O<-rbind(O,rev(E[i,]))
+      }
+    }
+  }
+  E<-matrix(E,ncol=2)
+  E<-E[-which(d==1),]
+  E<-matrix(E,ncol=2)
+  Trip_out<-triplets(Covlist,Ilist,Nlist,E,O,p,C,thres)
+  E<-Trip_out$Ulist
+  O<-Trip_out$Olist
+  return(list(oriented=O,unoriented=E))
+}
+
+
+#Function that implements strategy 2 in section 5.2
+#INPUT:   Covlist= list of covariance matrices
+#         Ilist= list of intervened nodes
+#         Nlist= list of sample sizes
+#         E= list of unoriented edges
+#         C= matrix of dependece measures
+#         thres= threshold for independence test
+#         p= size of the tree
+#         method= "simple" if you want to do the collider test as in 5.1  
+#OUTPUT:  oriented=  list of oriented edges
+#         unoriented= list of unoriented edges
+
+complete_alternating<-function(Covlist,Ilist,Nlist,C,thres,E,p,method){
+  alt_out<-alternating(Covlist,Ilist,Nlist,C,E,p,thres,method)
+  U<-alt_out$unoriented
+  O<-alt_out$oriented
+  if(length(U)!=0){
+    trip_out<-triplets(Covlist,Ilist,Nlist,U,c(),p,C,thres)
+    U<-trip_out$unoriented
+    O<-rbind(O,trip_out$oriented)
+  }
+  return(list(unoriented=U,oriented=O))
+}
+
+
+alternating<-function(Covlist,Ilist,Nlist,C,E,p,thres,method){
+  TOUSE<-numeric()
+  O<-numeric()
+  repeat{
+    if(length(TOUSE)==0){
+      E<-matrix(E,ncol=2)
+      index<-first_dir_id_edge(Ilist,E)
+       if(index!=0){
+        a<-pairlikelihood(Covlist,Ilist,Nlist,E[index,1],E[index,2])
+        b<-pairlikelihood(Covlist,Ilist,Nlist,E[index,2],E[index,1])
+        if(a>b){
+          o<-E[index,]
+          O<-rbind(O,o)
+        }else{
+          o<-rev(E[index,])
+          O<-rbind(O,o)
+        }
+      }else{
+        return(list(unoriented=E,oriented=O))
+        break
+      }
+      E<-E[-index,]
+      E<-matrix(E,ncol=2)
+      if(length(E)==0){
+        return(list(unoriented=E,oriented=O))
+        break
+      }
+    }
+    else{
+      TOUSE<-matrix(TOUSE,ncol=2)
+      o<-TOUSE[1,]
+      TOUSE<-TOUSE[-1,]
+    }
+    if(length(E)!=0){
+      E<-matrix(E,ncol=2)
+      l1<-which(E[,1]==o[2])
+      l2<-which(E[,2]==o[2])
+      for(i in l2){
+        E[i,]<-rev(E[i,])
+      }
+      l<-append(l1,l2)
+      E_o<-matrix(E[l,],ncol=2)
+      if(length(E_o)==0){
+      }
+      else{
+        E<-E[-l,]
+        for(i in c(1:(length(E_o)/2))){
+          if(method=="simple"){
+            outcome<-simpleitest(C,o[1],o[2],E_o[i,2],thres)
+          }else{
+            outcome<-tripletlikelihood(Covlist,Ilist,Nlist,o[1],o[2],E_o[i,2])
+          }
+          if(outcome==1){
+            O<-rbind(O,rev(E_o[i,]))
+          }
+          else{
+            O<-rbind(O,E_o[i,])
+            TOUSE<-rbind(TOUSE,E_o[i,])
+          }
+        }
+      }
+    }
+    else{
+      return(list(unoriented=E,oriented=O))
+      break
+    }
+  }
+}
+
+
+first_dir_id_edge<-function(Ilist,E){
+  E<-matrix(E,ncol=2)
+  if(length(E)==0){
+    return(0)
+  }
+  for(i in c(1:length(E[,1]))){
+    for(j in c(1:length(Ilist))){
+      if(length(intersect(Ilist[[j]][-1],E[i,]))==1){
+        return(i)
+        break
+      }
+    }
+  }
+  return(0)
+}
+ 
+ 
 ##Auxiliary Functions
 
 #Weight Matrix
