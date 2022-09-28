@@ -372,18 +372,21 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,checkConse
 #-----------
 #Functions to learn the CPDAG
 
+#Functions to learn the CPDAG
+
 #Performs procedure 1 of section 5.2
 #INPUT:   Covlist= list of covariance matrices
 #         Ilist= list of intervened nodes
 #         Nlist= list of sample sizes
 #         E= list of unoriented edges
 #         C= matrix of dependece measures
-#         thres= threshold for independence test 
+#         thres= threshold for independence test
+#         method= "simple" if you want to replace the collider test in 5.2 with the one in 5.1
 #OUTPUT:  oriented=  list of oriented edges
 #         unoriented= list of unoriented edges
-#          Xlist->Covlist
-complete_triplet<-function(p,Covlist,Ilist,Nlist,E,C,thres){
-  Trip_out<-triplets(Covlist,Ilist,Nlist,E,C,thres)
+complete_triplet<-function(p,Covlist,Ilist,Nlist,E,C,thres,method){
+  O<-numeric()
+  Trip_out<-triplets(Covlist,Ilist,Nlist,E,O,p,C,thres,method)
   U<-Trip_out$Ulist
   O<-Trip_out$Olist
   repeat{
@@ -415,18 +418,11 @@ complete_triplet<-function(p,Covlist,Ilist,Nlist,E,C,thres){
 #         Ilist= list of intervened nodes
 #         Nlist= list of sample sizes
 #         E= list of unoriented edges
-#         O= list of already oriented edges  
-#         p= tree size
 #         C= matrix of dependece measures
 #         thres= threshold for independence test 
-#         Xlist->Covlist
-triplets<-function(Covlist,Ilist,Nlist,E,C,thres){
-  m<-(nrow(E)+1)
-  V_v<-c(1:m)  #list of vertices to "check" i.e possible colliders
-  print(V_v)
+triplets<-function(Covlist,Ilist,Nlist,E,O,p,C,thres,method){
+  V_v<-c(1:p)  #list of vertices to "check" i.e possible colliders
   UE<-E
-  O<-numeric()       
-
   vcheck<-numeric()       #list of already checked vertices
   repeat{
     if(length(V_v)==0){
@@ -460,7 +456,7 @@ triplets<-function(Covlist,Ilist,Nlist,E,C,thres){
       }
       if((length(Li)>0)&(l>0)){   #if there are edges pointing towards v, and unoriented edges containig v orient the unoriented edges.
         e<-O[Li[1],]  
-        O<-withincoming(Covlist,Ilist,Nlist,e,v,Lu1,Lu2,O,UE)   #updated list of oriented edges
+        O<-withincoming(Covlist,Ilist,Nlist,e,v,Lu1,Lu2,O,UE,C,thres,method)   #updated list of oriented edges
         vcheck<-append(vcheck,i)
         update<-TRUE
         vupdate<-TRUE
@@ -546,25 +542,26 @@ tripletlikelihood<-function(Covlist,Ilist,Nlist,u,v,w){
 #takes as input a list the correlation matrix, an oriented edge, a vertex v, the wo lists of edges containing v, 
 #the lists of oriented/unoriented edges and a threshold
 #gives as output the updated list of oriented edges
-withincoming<-function(Covlist,Ilist,Nlist,e,v,Lu1,Lu2,O,UE){
+withincoming<-function(Covlist,Ilist,Nlist,e,v,Lu1,Lu2,O,UE,C,thres,method){
   d<-matrix(0,nrow = length(Lu1)+length(Lu2),ncol=1) 
+  UE<-matrix(UE,ncol=2)
   if(length(Lu1)>0){
     for(j in c(1:length(Lu1))){
-      if(length(UE)>2){
-        d[j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[Lu1[j],2])
+      if(method=="simple"){
+        d[j]<-simpleitest(C,e[1],v,UE[Lu1[j],2],thres)
       }
       else{
-        d[j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[2])
+        d[j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[Lu1[j],2])
       }
     }
   }
   if(length(Lu2)>0){
     for(j in c(1:length(Lu2))){
-      if(length(UE)>2){
-        d[length(Lu1)+j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[Lu2[j],1])
+      if(method=="simple"){
+        d[j]<-simpleitest(C,e[1],v,UE[Lu2[j],1],thres)
       }
       else{
-        d[length(Lu1)+j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[1])
+        d[length(Lu1)+j]<-tripletlikelihood(Covlist,Ilist,Nlist,e[1],v,UE[Lu2[j],1])
       }
     }
   }
@@ -641,7 +638,6 @@ withlist<-function(Lu1,Lu2,O,UE,d){
   }
   return(O)
 }
-
   
 # Function that implements strategy 3 in section 5.2
 #INPUT:   Covlist= list of covariance matrices
@@ -651,11 +647,12 @@ withlist<-function(Lu1,Lu2,O,UE,d){
 #         C= matrix of dependece measures
 #         thres= threshold for independence test
 #         p= size of the tree
+#         method= "simple" if you want to replace the collider test in 5.2 with the one in 5.1
 #OUTPUT:  oriented=  list of oriented edges
 #         unoriented= list of unoriented edges
 
 
-dir_i_or_first<-function(Covlist,Ilist,Nlist,C,thres,E,p){
+dir_i_or_first<-function(Covlist,Ilist,Nlist,C,thres,E,p,method){
   d<-dir_ident_edges(Ilist,E)
   O<-c()
   for(i in c(1:length(d))){
@@ -672,12 +669,12 @@ dir_i_or_first<-function(Covlist,Ilist,Nlist,C,thres,E,p){
   E<-matrix(E,ncol=2)
   E<-E[-which(d==1),]
   E<-matrix(E,ncol=2)
-  Trip_out<-triplets(Covlist,Ilist,Nlist,E,O,p,C,thres)
+  Trip_out<-triplets(Covlist,Ilist,Nlist,E,O,p,C,thres,method)
   E<-Trip_out$Ulist
   O<-Trip_out$Olist
   return(list(oriented=O,unoriented=E))
 }
-
+  
 
 #Function that implements strategy 2 in section 5.2
 #INPUT:   Covlist= list of covariance matrices
@@ -696,7 +693,7 @@ complete_alternating<-function(Covlist,Ilist,Nlist,C,thres,E,p,method){
   U<-alt_out$unoriented
   O<-alt_out$oriented
   if(length(U)!=0){
-    trip_out<-triplets(Covlist,Ilist,Nlist,U,c(),p,C,thres)
+    trip_out<-triplets(Covlist,Ilist,Nlist,U,c(),p,C,thres,method)
     U<-trip_out$unoriented
     O<-rbind(O,trip_out$oriented)
   }
