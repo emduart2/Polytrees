@@ -8,8 +8,8 @@ sdatasets<-c()
 totalSamples<-c(100,1000,10000)
 p<-20
 k<-20
-SHD_1<-SHD_2<-SHD_2_simp<-SHD_3<-array(0,c(length(nndatasets),
-                                                         length(iss),length(totalSamples),k))
+SHD_1_simp<-SHD_1<-SHD_2<-SHD_2_simp<-SHD_3<-SHD_3_simp<-array(0,c(length(nndatasets),
+                                           length(iss),length(totalSamples),k))
 for(ss in c(1:length(totalSamples))){
   for(ii in c(1:length(iss))){
     for(nn in c(1:length(nndatasets))){
@@ -27,19 +27,26 @@ for(ss in c(1:length(totalSamples))){
         true_i_cpdag<-as(true_i_cpdag_adj,"graphNEL")
         
         E<-get.edgelist(G)
-
+        
         
         thres<-0.5*log(sum(Nlist))*length(Ilist)
         
         lC<-Imatrix(C_list,ID$Ns)
-
+        
         #meanC<-wmeanCorrels(C_list,ID$Ns)$Rmean
         #CL<-chowLiu(meanC)
         #E_e<-get.edgelist(CL)
-
-       
+        
+        
         ##Orientation with original skeleton strategy 1
-        dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E,lC,thres)
+        dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E,lC,thres,method="simple")
+        dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
+        i_cpdag_adj<-i_cpdag(Ilist,dag_adj)
+        i_cpdag_graph<-as(i_cpdag_adj,"graphNEL")
+        
+        SHD_1_simp[nn,ii,ss,kk]<-shd(true_i_cpdag,i_cpdag_graph)
+        
+        dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E,lC,thres,method="nothing")
         dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
         i_cpdag_adj<-i_cpdag(Ilist,dag_adj)
         i_cpdag_graph<-as(i_cpdag_adj,"graphNEL")
@@ -60,7 +67,14 @@ for(ss in c(1:length(totalSamples))){
         SHD_2[nn,ii,ss,kk]<-shd(true_i_cpdag,i_cpdag_graph)
         
         ##Orientation with original skeleton strategy 3
-        dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E,p)
+        dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E,p,method="simple")
+        dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
+        i_cpdag_adj<-i_cpdag(Ilist,dag_adj)
+        i_cpdag_graph<-as(i_cpdag_adj,"graphNEL")
+        
+        SHD_3_simp[nn,ii,ss,kk]<-shd(true_i_cpdag,i_cpdag_graph)
+        
+        dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E,p,method="nothing")
         dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
         i_cpdag_adj<-i_cpdag(Ilist,dag_adj)
         i_cpdag_graph<-as(i_cpdag_adj,"graphNEL")
