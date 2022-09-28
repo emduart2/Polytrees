@@ -1,6 +1,32 @@
 # setup
 labelBoth = labeller(.default=label_both)
 
+
+# figure 1:
+df_params <- expand.grid(
+  tsize = c(100),
+  totalSamples = c(300),
+  interventionSize = c(1,2,4),
+  ndatasets = c(20,40,60,80,100),
+  k = c(1:20),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  conservative = FALSE
+)
+l <- orientationExploration(df_params,allResults); df_plot=l$df; plot_str=l$str
+
+
+
+
+
+
+
+
+
+
+
+
+
 # simulate data
 df_params <- expand.grid(
   tsize = c(100),
