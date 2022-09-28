@@ -171,16 +171,19 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
   Llist<-list()
   Xlist<-list()
   nList<-c()
+  edgesIntervened <- 0
   for(I in interventionTargets){
     nI<-I[1] # first element is the sample size
+    edgIntI <- 0
     if(length(I)==1){ # in this case there are no intervention targets.
       LI<-L
-    } else{
+    } else{	
       tI<-I[-1] # remaining elements are the intervention targets
       LI<-matrix(0,p,p)
       LI<-L
       for (j in (1:length(tI))) { # this changes the coeff in the structural eqns
         parentsj<-neighbors(G,tI[j],mode = "in")
+        edgIntI <- edgIntI + length(parentsj)
         if (length(parentsj)>0){
           for (k in parentsj){
             
@@ -211,8 +214,9 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
     Llist<-append(Llist,list(LI))
     nList<-append(nList,nI)
     Xlist<-append(Xlist,list(XI))
+    edgesIntervened <- edgesIntervened + nI * edgIntI
   }
-  RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList,Xs=Xlist,Covs=Covlist)
+  RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList,Xs=Xlist,Covs=Covlist,edgesIntervened=edgesIntervened)
   return(RLlist)
 }
 #Imatrix
