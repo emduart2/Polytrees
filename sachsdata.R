@@ -13,6 +13,7 @@ Xlist[[1]]<-rbind(as.matrix(df.list[[1]]),as.matrix(df.list[[7]]))
 Nlist[1]<-1755
 for(i in c(1:5)){
   Xlist[[i+1]]<-as.matrix(df.list[[i+7]])
+  Xlist[[i+1]]<-Xlist[[i+1]]-mean(Xlist[[i+1]])
   Nlist[i+1]<-dim(df.list[[i+7]])[1]
 }
 
@@ -23,30 +24,7 @@ Ilist[[3]]<-c(Nlist[3],9)
 Ilist[[4]]<-c(Nlist[4],4)
 Ilist[[5]]<-c(Nlist[5],2,6)
 Ilist[[6]]<-c(Nlist[6],7)
-
-
-
 p<-11
-#DAG computation
-
-Clist<-list()
-for(i in c(1:6)){
-  Clist[[i]]<-cor(Xlist[[i]])
-}
-
-lC<-Imatrix(Clist,Nlist)
-meanC<-wmeanCorrels(Clist,Nlist)$Rmean
-
-CL<-chowLiu(meanC)
-E_e<-get.edgelist(CL)
-
-thres<-0.5*log(sum(Nlist))
-
-e_s_dag_list<-complete_triplet(p,Xlist,Ilist,Nlist,E_e,lC,thres)
-e_s_dag_adj<-cpdag_from_lists(e_s_dag_list$oriented,e_s_dag_list$unotiented,p)
-G<-as(e_s_dag_adj,"graphNEL")
-
-nodes(G)<-colnames(Xlist[[1]])
 
 
 ##Ground truth
@@ -75,8 +53,37 @@ for(i in c(1:11)){
 trueG<-as(trueAD,"graphNEL")
 
 
+
+
+#DAG computation
+
+Clist<-list()
+Covlist<-list()
+for(i in c(1:6)){
+  Covlist[[i]]<-cov(Xlist[[i]])
+  Clist[[i]]<-cov2cor(Covlist[[i]])
+}
+
+lC<-Imatrix(Clist,Nlist)
+meanC<-wmeanCorrels(Clist,Nlist)$Rmean
+
+CL<-chowLiu(meanC)
+E_e<-get.edgelist(CL)
+
+thres<-3*log(sum(Nlist))
+#e_s_dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple")
+#e_s_dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E_e,lC,thres,method="simple")
+e_s_dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple")
+
+e_s_dag_adj<-cpdag_from_lists(e_s_dag_list$oriented,e_s_dag_list$unotiented,p)
+colnames(e_s_dag_adj)<-colnames(Xlist[[1]])
+G<-graph_from_adjacency_matrix(e_s_dag_adj)
+G<-as_graphnel(G)
+
 #Comparison
-shd(trueG,G)/sum(e_s_dag_adj+trueAD)
+shd(trueG,G)
+SID::structIntervDist(trueG,G)$sidUpperBound
 
-
-
+par(mfrow=c(1,2))
+plot(G)
+plot(trueG)
