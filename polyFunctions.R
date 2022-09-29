@@ -117,18 +117,22 @@ coeffLambda<-function(G){
 # Inputs:
 #   n: Integer. Number of samples.
 #   Lambda: Numeric Matrix. Matrix of coefficients
+#   varvector: vector of error variances
 # Outputs:
 #   Matrix: n-by-dim(Lambda,1) matrix with samples.
-samplingDAG<-function(n,Lambda){
+samplingDAG<-function(n,Lambda,varvector){
   p<-nrow(Lambda)
-  eps <- matrix( rnorm(p*n,mean=0,sd=1), p, n) 
+  eps<-matrix(0,p,n)
+  for(i in c(1:p)){
+    eps[i,]<-rnorm(n,mean=0,varvector[i])
+  }
+  #eps <- matrix( rnorm(p*n,mean=0,sd=1), p, n) 
   lambdaInv<-solve(diag(rep(1,p))-Lambda)
   # XmatIncorrect <- t(lambdaInv %*% eps)
   XmatCorrect <- t(t(lambdaInv) %*% eps)
   
   return(XmatCorrect)
 }
-
 #------------------------
 #---------------------------------------------------------------------
 # This functions learns a skeleton from the absolute value
@@ -165,6 +169,7 @@ chowLiu<-function(R){
 
 interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"){
   p<-nrow(L)
+  varvector<-abs(rnorm(p,mean=0,sd=100))
   ndatasets<-length(interventionTargets)
   Covlist<-list()
   Rlist<-list()
@@ -206,7 +211,7 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
         }
       }
     }
-    XI<-samplingDAG(nI,LI)
+    XI<-samplingDAG(nI,LI,varvector)
     CovI<-sample.cov(XI)
     RI<-cov2cor(CovI)
     Covlist<-append(Covlist,list(CovI))
