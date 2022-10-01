@@ -44,6 +44,7 @@ library(DescTools)
 library(Matrix)
 library(graph)
 library(mpoly)
+library(sets)
 #-------------------------
 
 # Function for calculating sample covariance matrix
@@ -317,15 +318,15 @@ wmeanCorrels<-function(corrIs,nIs){
 #        totalSample = sum of the sample sizes of all interventional and obsv. experiments, to be specified
 #        only if sdatasets=c().
 #
-#        checkConservativity= Boolean. If TRUE, ensures that resulting family
-#           of interventional targets is conservative. Default: FALSE
+#        ensureDiff= Boolean. If TRUE, ensures that all interventional targets
+#           are different. Default: TRUE
 #
 # If interventionsize==1 and sdatasets==c(), then you get the same output of "interventionalSetting" 
 # where proprI=totalsample/ndatsets
-isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,checkConservativity=FALSE){
+isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,ensureDiff=TRUE){
   g<-pruferwithskeletonOpt(p)
   lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
-  
+
   if(length(sdatasets)==0){
     s<-sdatasets
     sdatasets<-0*c(1:ndatasets)+totalsample%/%ndatasets
@@ -337,40 +338,39 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,checkConse
     interventionsize[1]<-0
   }
   interventionTargets<-list()
-  if(! checkConservativity) {
+  if(! ensureDiff) {
     # just independently sample interventional sets
     for(i in c(1:ndatasets)){
       I<-sample(p,interventionsize[i],replace=FALSE)
       interventionTargets<-append(interventionTargets,list(c(sdatasets[i],I)))
     }
   } else {
-
-    interventionTargets <- vector("list", ndatasets)
+  
+    # check that generating different targets is possible
+    warning("There might be an infinite loop. Please be sure that generating different intervention targets is possible.")
     
-    # first sample 
-    I <- sample(p,interventionsize[i],replace=FALSE)
-    interventionTargets[[1]] <- c(sdatasets[1],I)
-    
-    # sample where to ensure that all nodes that were intervened in the first sample
-    # will not be intervened to guarantee conservativity
-    stillNeedsToBeNotIntervened <- I
-    notToIntervene <- vector("list", ndatasets)
-    maxNumNotToSample <- p-interventionsize
-    ind <- 2:ndatasets
-    if(sum(maxNumNotToSample[ind]) < length(stillNeedsToBeNotIntervened))
-      stop("Conservative family of intervention targets not possible with given parameters.")
-    for(node in stillNeedsToBeNotIntervened){
-      
-      # sample intervention index where node ensured not to be intervened
-      j <- sample(x = ind, 1, prob = maxNumNotToSample[ind]/sum(maxNumNotToSample[ind]))
-      notToIntervene[[j]] <- append(notToIntervene[[j]], node)
-      maxNumNotToSample[j] <- maxNumNotToSample[j] - 1
+    # naive implementation with re-sampling (might be slow)
+    intvTargetSets = vector(mode="list", ndatasets-1)
+    for(i in (1:ndatasets)){
+      repeat{
+        I <- as.set(sample(p,interventionsize[i],replace=FALSE))
+        j=1; found=FALSE;
+        while(j<i && found==FALSE){
+          found = intvTargetSets[[j]] == I
+          j=j+1
+        }
+        if(found==FALSE){
+          break
+        }
+      }
+      intvTargetSets[[i]] = I
     }
     
-    # sample remaining interventions
-    for(i in 2:ndatasets){
-      I <- sample(setdiff(1:p,notToIntervene[[i]]), interventionsize[i], replace=FALSE)
-      interventionTargets[[i]] <- c(sdatasets[i],I)
+    # parse into output list
+    interventionTargets = vector(mode="list",ndatasets)
+    interventionTargets[[1]] = c(ndatasets[1])
+    for(i in 1:ndatasets){
+      interventionTargets[[i]] = c(sdatasets[i],as.numeric(intvTargetSets[[i]]))
     }
   }
 
