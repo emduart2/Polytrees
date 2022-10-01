@@ -2,8 +2,6 @@ library(foreach)
 library(utils)
 library(progressr)
 
-packages = c("mpoly")
-
 # example parameter space to explore
 # (interventionSize >= 1 is the absolute value of nodes to intervene)
 # df_params <- expand.grid(
@@ -68,7 +66,6 @@ estimate_orientations <- function(p,Covlist,Ilist,Nlist,ESkel,lC,thres,procedure
       dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,ESkel,p,method="nothing");
       dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p);
       i_cpdag_graph<-as(dag_adj,"graphNEL");
-      shd_2 <-shd(true_i_cpdag,i_cpdag_graph)
     },
     error = function(e){i_cpdag_graph <<- NULL})
     return(i_cpdag_graph)
@@ -115,13 +112,13 @@ orientationExploration <- function(df_params,allResults=list(), allOneNodeIntv=F
     k = df_params$k,
     sd = df_params$sdatasets,
     kindOfIntervention = df_params$kindOfIntervention,
-    conservative = df_params$conservative,
     estimateSkeleton = df_params$estimateSkeleton,
+    ensureDiff = df_params$ensureDiff,
     .combine = 'rbind',
     .verbose=TRUE,
     .errorhandling = "stop",
-    .packages = packages
-  ) %dopar% {
+    .packages = c("mpoly")
+  ) %do% {
     # parse parameters
     if(length(sd) == 1 && sd == -1) {
       sd <- c()
@@ -133,7 +130,7 @@ orientationExploration <- function(df_params,allResults=list(), allOneNodeIntv=F
     }
     
     # create setting
-    IS <- isetting(p,nds,iss,sd,totalSmpl, checkConservativity=conservative)
+    IS <- isetting(p,nds,iss,sd,totalSmpl, ensureDiff = ensureDiff)
     G<-graph_from_adjacency_matrix(IS$gTrued)
     ID<-interventionalData(G,IS$L,IS$targetsI)
     Covlist<-ID$Covs

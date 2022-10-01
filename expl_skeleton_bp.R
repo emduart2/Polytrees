@@ -1,19 +1,66 @@
 # setup
 labelBoth = labeller(.default=label_both)
 
-
-# figure 1:
+# figure 1 left
 df_params <- expand.grid(
-  tsize = c(100),
-  totalSamples = c(300),
-  interventionSize = c(1,2,4),
-  ndatasets = c(20,40,60,80,100),
+  tsize = c(20),
+  totalSamples = c(70,200,500),
+  interventionSize = c(1),
+  ndatasets = c(21),
   k = c(1:20),
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
-  conservative = FALSE
+  ensureDiff = TRUE
 )
-l <- orientationExploration(df_params,allResults); df_plot=l$df; plot_str=l$str
+l <- skeletonExploration(df_params,allResults); df_plot=l$df; plot_str=l$str
+l001 = l
+
+# figure 1 middle
+df_params <- expand.grid(
+  tsize = c(20),
+  totalSamples = c(70),
+  interventionSize = c(1),
+  ndatasets = c(2,11,21),
+  k = c(1:20),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE
+)
+l <- skeletonExploration(df_params,allResults); df_plot=l$df; plot_str=l$str
+l002 = l
+
+# figure 1 right
+df_params <- expand.grid(
+  tsize = c(20),
+  totalSamples = c(70),
+  interventionSize = c(1,2,4),
+  ndatasets = c(21),
+  k = c(1:20),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE
+)
+l <- skeletonExploration(df_params,allResults); df_plot=l$df; plot_str=l$str
+l003 = l
+
+# plot figures
+f001 = ggplot(l001$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot()
+f002 = ggplot(l002$df, aes(ndatasets,SHD,fill=factor(method))) + geom_boxplot()
+f003 = ggplot(l003$df, aes(interventionSize,SHD,fill=factor(method))) + geom_boxplot()
+
+
+# figure 1: merge figure together
+f004 = (f001 +labs(title=NULL) +theme(legend.position = "none")) +
+  (f002 +labs(title=NULL) +theme(legend.position = "none")) +
+  (f003 +labs(title=NULL, fill="aggr fct")) +
+  plot_layout(nrow = 1)
+
+f004
+
+
+
+
+
 
 
 

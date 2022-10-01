@@ -6,7 +6,7 @@ library(progressr)
 # matrices. If number of nodes larger three and the skeletons are both
 # trees, the result lies in [0,1]
 SHD_skeleton <- function(S1,S2){
-  return(sum(abs(S1-S2))/2/(p-1)/2)
+  return(sum(abs(S1-S2))/2)
 }
 
 # estimates the skeleton from interventional data.
@@ -61,7 +61,8 @@ skeletonExploration <- function(df_params,allResults=list()){
     k = df_params$k,
     sd = df_params$sdatasets,
     kindOfIntervention = df_params$kindOfIntervention,
-    conservative = df_params$conservative,
+    ensureDiff = df_params$ensureDiff,
+    .packages = c("mpoly"),
     .combine = 'rbind',
     .verbose=TRUE
   ) %do% {
@@ -76,7 +77,7 @@ skeletonExploration <- function(df_params,allResults=list()){
     }
     
     # create setting and sample interventional correlation matrices
-    IS <- isetting(p,nds,iss,sd,totalSmpl, checkConservativity=conservative)
+    IS <- isetting(p,nds,iss,sd,totalSmpl, ensureDiff=ensureDiff)
     G <- graph_from_adjacency_matrix(IS$gTrued)
     ID <- interventionalData(G,IS$L,IS$targetsI,kindOfIntervention=kindOfIntervention)
     
@@ -115,7 +116,7 @@ skeletonExploration <- function(df_params,allResults=list()){
   # close parallel cluster
   # parallel::stopCluster(cl = my.cluster)
   
-  return(list(df=df,allResults=allResults))
+  return(prepare_df_plot(df))
 }
 
 
@@ -126,6 +127,7 @@ prepare_df_plot <- function(df){
   df$interventionSize <- factor(df$interventionSize, levels=sort(unique(df$interventionSize),decreasing = FALSE))
   df$ndatasets <- factor(df$ndatasets, levels=sort(unique(df$ndatasets),decreasing = FALSE))
   df$tsize <- factor(df$tsize, levels=sort(unique(df$tsize),decreasing = FALSE))
+  df$sdatasets <- as.character(lapply(df$sdatasets, FUN=function(x){paste(x,collapse=", ")}))
   
   # create parameter strings
   str = ""
@@ -148,7 +150,7 @@ prepare_df_plot <- function(df){
     str = append(str,paste(", conservative: ", unique(df$conservative)))
   }
   str <- paste(str,collapse="")
-  str <- substr(s,3,1000000L)
+  str <- substr(str,3,1000000L)
   return(list(df=df,str=str))
 }
 
