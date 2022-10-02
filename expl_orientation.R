@@ -138,8 +138,10 @@ orientationExploration <- function(df_params,allResults=list(), allOneNodeIntv=F
     Ilist<-IS$targetsI
     Nlist<-ID$Ns      
     C_list<-ID$Rs
-    true_i_cpdag_adj<-i_cpdag(Ilist,IS$gTrued)
-    true_i_cpdag<-as(true_i_cpdag_adj,"graphNEL")
+    for(i in c(1:length(Covlist))){
+       Covlist[[i]]<-Covlist[[i]]*Nlist[i]
+    }
+    true_i_cpdag<-dag2essgraph(as_graphnel(G),Ilist)
     thres<-0.5*log(sum(Nlist))*length(Ilist)
     lC<-Imatrix(C_list,ID$Ns)
     if(estimateSkeleton != "FALSE"){
@@ -153,15 +155,15 @@ orientationExploration <- function(df_params,allResults=list(), allOneNodeIntv=F
     ##Orientation with original skeleton strategy 1
     dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,ESkel,lC,thres,method="simple")
     dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
-    i_cpdag_adj<-i_cpdag(Ilist,dag_adj)
-    i_cpdag_graph<-as(i_cpdag_adj,"graphNEL")
+    e_G<-graph_from_adjacency_matrix(dag_adj)
+    i_cpdag_graph<-dag2essgraph(as_graphnel(e_G),Ilist)
     shd_1_simp <-shd(true_i_cpdag,i_cpdag_graph)
     
     tryCatch({
       dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,ESkel,lC,thres,method="nothing");
       dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p);
-      i_cpdag_adj<-i_cpdag(Ilist,dag_adj);
-      i_cpdag_graph<-as(i_cpdag_adj,"graphNEL");
+      e_G<-graph_from_adjacency_matrix(dag_adj)
+      i_cpdag_graph<-dag2essgraph(as_graphnel(e_G),Ilist)
       shd_1 <-shd(true_i_cpdag,i_cpdag_graph)
     },
     error = function(e){shd_1 <<- NaN}
