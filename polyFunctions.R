@@ -108,7 +108,7 @@ coeffLambda<-function(G){
   for(j in (1:nrow(edg))){
     r<-edg[j,1]
     c<-edg[j,2]
-    Lambda[r,c]<- lambdaCoeff[j]
+    Lambda[c,r]<- lambdaCoeff[j]
   }
   return(Lambda)
 }
@@ -207,7 +207,7 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
             } else {
               stop("Invalid value of kindOfIntervention.")
             }
-            LI[k,tI[j]]<-coeff
+            LI[tI[j],k]<-coeff
           }
         }
       }
