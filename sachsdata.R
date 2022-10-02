@@ -22,8 +22,8 @@ Ilist[[1]]<-c(Nlist[1])
 Ilist[[2]]<-c(Nlist[2],7)
 Ilist[[3]]<-c(Nlist[3],9)
 Ilist[[4]]<-c(Nlist[4],4)
-Ilist[[5]]<-c(Nlist[5],2,6)
-Ilist[[6]]<-c(Nlist[6],7)
+Ilist[[5]]<-c(Nlist[5],2)
+Ilist[[6]]<-c(Nlist[6],5)
 p<-11
 
 
