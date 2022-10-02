@@ -54,12 +54,14 @@ bothExploration <- function(df_params,methods){
     G<-graph_from_adjacency_matrix(IS$gTrued)
     ID<-interventionalData(G,IS$L,IS$targetsI)
     Covlist<-ID$Covs
+    for(i in c(1:length(Covlist))){
+          Covlist[[i]]<-Covlist[[i]]*Nlist[i]
+        }
     Xlist<-ID$Xs
     Ilist<-IS$targetsI
     Nlist<-ID$Ns      
     C_list<-ID$Rs
-    true_i_cpdag_adj<-i_cpdag(Ilist,IS$gTrued)
-    true_i_cpdag<-as(true_i_cpdag_adj,"graphNEL")
+    true_i_cpdag<-dag2essgraph(as_graphnel(G),Ilist)
     thres<-0.5*log(sum(Nlist))*length(Ilist)
     lC<-Imatrix(C_list,ID$Ns)
     
