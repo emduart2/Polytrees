@@ -905,33 +905,29 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
   U<-c()
   ndatasets<-length(Ilist)
   if(nrow(E)!=0){
-    l<-length(Xs)
     IE<-I_env(E,Ilist)
     for(i in c(1:nrow(E))){
       e1<-E[i,1]
       e2<-E[i,2] 
-      Inoe1noe2<- which(IE$Env_matrix[i,]==0) # indices where neither e1 or e2 were intervened on
       Ie1noe2<-which(IE$Env_matrix[i,]==1) # indices where e1 is a target but e2 is not
       Inoe1e2<-which(IE$Env_matrix[i,]==-1) # indices where e2 is a target but e1 is not
-      Xnoe1noe2<-vector(mode='list', length=length(Inoe1noe2))
+      Xobsv<-cbind(Xs[[1]][,e1],Xs[[1]][,e2]) # This is assuming the first sample is always the observed one
       Xe1noe2 <- vector(mode='list', length=length(Ie1noe2)) # list to save the data sets relevant to test the direction e1->e2
       Xnoe1e2<- vector(mode='list', length=length(Inoe1e2))  # list to save the data sets relevant to test the direction e2->e1
       p_vals_t1<-c()
       p_vals_t2<-c()
-      if(length(Inoe1noe2)>0 & length(Ie1noe2)>0 & length(Inoe1e2)>0){ # In this case we can test both directions
-        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # the order in of these two columns
+      if(length(Ie1noe2)>0 & length(Inoe1e2)>0){ # In this case we can test both directions
         for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # matters to perform the test e1 is indp var, e2 is dep
         for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # here e2 is ind, e1 is the dep
-        Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
         Xe1noe2<-Xe1noe2[-which(sapply(Xe1noe2, is.null))]
         Xnoe1e2<-Xnoe1e2[-which(sapply(Xnoe1e2, is.null))]
         print("Two tests")
         for(i in c(1:length(Xe1noe2))){ # These are the p_values to test e1->e2
-          p_val<-F_test(Xnoe1noe2,Xe1noe2[[i]])
+          p_val<-F_test(Xobsv,Xe1noe2[[i]])
           p_vals_t1<-cbind(p_vals_t1,p_val)
         }
         for(i in c(1:length(Xnoe1e2))){ # These are the p_values to test e2->e1
-          p_val<-F_test(cbind(Xnoe1noe2[,2],Xnoe1noe2[,1]),Xnoe1e2[[i]])
+          p_val<-F_test(cbind(Xobsv[,2],Xobsv[,1]),Xnoe1e2[[i]]) # The order of the columns is swapped here
           p_vals_t2<-cbind(p_vals_t2,p_val)
         }
         print(length(p_vals_t1))
@@ -942,16 +938,14 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
         else if (mint2<mint1 & mint2<alpha/length(Inoe1e2) ){O<-rbind(O,c(e1,e2))}
         else{U<-rbind(U,c(e1,e2))}
       }
-      else if(length(Inoe1noe2)>0 & length(Ie1noe2)>0 & length(Inoe1e2)==0){ # Can only use the test for e1->e2
-        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # the order in of this two columns
+      else if(length(Ie1noe2)>0 & length(Inoe1e2)==0){ # Can only use the test for e1->e2
+        # the order of the two columns matters
         for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} 
-        Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
         Xe1noe2<-Xe1noe2[-which(sapply(Xe1noe2, is.null))]
-
         print("One test e1 to e2")
         p_vals_t1<-c()
         for(i in c(1:length(Xe1noe2))){ # These are the p_values to test e1->e2
-          p_val<-F_test(Xnoe1noe2,Xe1noe2[[i]])
+          p_val<-F_test(Xobsv,Xe1noe2[[i]])
           p_vals_t1<-cbind(p_vals_t1,p_val)
         }
         c<-which(p_vals_t1<  alpha/length(Ie1noe2))
@@ -960,15 +954,14 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
         if (length(c)==0){U<-rbind(U,c(e1,e2))}
         else {O<-rbind(O,c(e2,e1))}
       }
-      else if(length(Inoe1noe2)>0 & length(Ie1noe2)==0 & length(Inoe1e2)>0){ # Can only use the test for e2->e1
-        for(k in Inoe1noe2) {Xnoe1noe2<-append(Xnoe1noe2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # The swap of the columns is here
+      else if(length(Ie1noe2)==0 & length(Inoe1e2)>0){ # Can only use the test for e2->e1
         for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))}
-        Xnoe1noe2<-groupD(Xnoe1noe2[-which(sapply(Xnoe1noe2, is.null))])
+        
         Xnoe1e2<-Xnoe1e2[-which(sapply(Xnoe1e2, is.null))]
         print("One test e2 to e1")
         p_vals_t2<-c()
         for(i in c(1:length(Xnoe1e2))){ # These are the p_values to test e2->e1
-          p_val<-F_test(Xnoe1noe2,Xnoe1e2[[i]])
+          p_val<-F_test(cbind(Xobsv[,2],Xobsv[,1]),Xnoe1e2[[i]])
           p_vals_t2<-cbind(p_vals_t2,p_val)
         }
         print(p_vals_t2)
