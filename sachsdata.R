@@ -1,7 +1,8 @@
 library(readxl)
 #Download Data
-file.list <- list.files(pattern='*.xls', recursive = TRUE)
-df.list <- lapply(file.list, read_excel)
+sachs_dir = "/home/lenny/Documents/Mathematische Statistik Lehrstuhl/sachs.som.datasets/"
+file.list <- list.files(sachs_dir, pattern='*.xls', recursive = TRUE)
+df.list <- lapply(paste(sachs_dir,file.list,sep=""), read_excel)
 
 
 
@@ -17,19 +18,18 @@ for(i in c(1:5)){
   Nlist[i+1]<-dim(df.list[[i+7]])[1]
 }
 
-Ilist<-list()
-Ilist[[1]]<-c(Nlist[1])
-Ilist[[2]]<-c(Nlist[2],7)
-Ilist[[3]]<-c(Nlist[3],9)
-Ilist[[4]]<-c(Nlist[4],4)
-Ilist[[5]]<-c(Nlist[5],2,6)
-Ilist[[6]]<-c(Nlist[6],7)
+Ilist <- list()
+Ilist[[1]]<-c(Nlist[1])     # baseline
+Ilist[[2]]<-c(Nlist[2],7)   # akt -> akt
+Ilist[[3]]<-c(Nlist[3],9)   # g0076 -> PKC
+Ilist[[4]]<-c(Nlist[4],4)   # psitect -> PIP2
+Ilist[[5]]<-c(Nlist[5],2) # u0126 -> MEK
+Ilist[[6]]<-c(Nlist[6],5)   # ly -> PIP3?
 p<-11
 
 
 ##Ground truth
 edg<-list()
-
 edg[[1]]<-c("PKA")
 edg[[2]]<-c("praf","PKA")
 edg[[3]]<-c()
@@ -41,7 +41,6 @@ edg[[8]]<-c("PKC")
 edg[[9]]<-c("PIP2","plcg")
 edg[[10]]<-c("PKA","pjnk")
 edg[[11]]<-c("PKC","PKA")
-
 trueAD<-matrix(0,nrow=11,ncol=11)
 rownames(trueAD)<-colnames(trueAD)<-colnames(Xlist[[1]])
 for(i in c(1:11)){
@@ -49,7 +48,6 @@ for(i in c(1:11)){
     trueAD[j,i]<-1
   }
 }
-
 trueG<-as(trueAD,"graphNEL")
 
 
@@ -71,8 +69,8 @@ CL<-chowLiu(meanC)
 E_e<-get.edgelist(CL)
 
 thres<-3*log(sum(Nlist))
-#e_s_dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple")
-#e_s_dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E_e,lC,thres,method="simple")
+# e_s_dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple")
+# e_s_dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E_e,lC,thres,method="simple")
 e_s_dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple")
 
 e_s_dag_adj<-cpdag_from_lists(e_s_dag_list$oriented,e_s_dag_list$unotiented,p)
@@ -87,3 +85,44 @@ SID::structIntervDist(trueG,G)$sidUpperBound
 par(mfrow=c(1,2))
 plot(G)
 plot(trueG)
+
+
+
+
+# estimate with GIES
+totalSmpl = sum(Nlist)
+allSamples = matrix(0, totalSmpl, p)
+targetindex = array(0, totalSmpl)
+targets = vector("list", length(Ilist))
+a = b = 1
+for(j in 1:length(Ilist)){
+  b <- a + Ilist[[j]][1]-1
+  allSamples[a:b,] = Xlist[[j]]
+  targetindex[a:b] = j
+  targets[[j]] = Ilist[[j]][-1]
+  a <- b+1
+}
+setting_GIES = new("GaussL0penIntScore", 
+                   data=allSamples, 
+                   targets=targets, 
+                   target.index=targetindex)
+
+
+# GIES estimate
+gies.fit = gies(setting_GIES)
+gies_est = as(gies.fit$essgraph,"graphNEL")
+
+shd(trueG, gies_est)
+SID::structIntervDist(trueG,gies_est)$sidUpperBound
+
+
+# check true and false positives
+adj_true = as(trueG,"matrix")
+adj_est = as(gies_est,"matrix")
+(fp = sum((adj_est==1) & (adj_true==0)))
+(tp = sum((adj_est==1) & (adj_true==1)))
+
+par(mfrow=c(1,2))
+plot(gies_est)
+plot(trueG)
+
