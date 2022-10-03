@@ -111,7 +111,11 @@ bothExploration <- function(df_params,methods){
         s = Sys.time()
         est = estimate_orientations(p,Covlist,Ilist,Nlist,ESkel,lC,thres,procedure=methods[[i]][2])
         time_ort = as.numeric(Sys.time() - s) * 1000
-        shd_all = shd(est, true_i_cpdag)
+        if(is.null(est)){
+          sdh_all = NaN
+        } else {
+          shd_all = shd(est, true_i_cpdag)
+        }
       }
       res[i,] = c(shd_all, shd_skel, time_ort, time_skel, ID$edgesIntervened)
     }

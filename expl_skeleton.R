@@ -9,6 +9,11 @@ SHD_skeleton <- function(S1,S2){
   return(sum(abs(S1-S2))/2)
 }
 
+# computes SID of two DAGs given as (symmetric) adjacency matrices. 
+SID <- function(S1,S2){
+  return(SID::structIntervDist(S1,S2)$sidUpperBound)
+}
+
 # estimates the skeleton from interventional data.
 # Inputs: Rs=list of sampled correlation matrices, Ns=samplesizes,
 #   method=computation method.
@@ -42,7 +47,7 @@ df_params <- expand.grid(
 # - to execute in parallel, uncomment corresponding code blocks and change
 #   "%do%" into "%dopar%"
 #   WARNING: parallel execution might run into problem on windows machines!
-skeletonExploration <- function(df_params,allResults=list()){
+skeletonExploration <- function(df_params, scoreFct = SHD_skeleton){
   # setup parallel cluster
   # n.cores <- parallel::detectCores() - 1
   # my.cluster <- parallel::makeCluster(
@@ -83,38 +88,47 @@ skeletonExploration <- function(df_params,allResults=list()){
     
     # compute deviation from true skeleton for 3 diff aggregation functions
     estimated_skeleton<-estimate_skeleton(ID$Rs,ID$Ns,method="ltest")
-    SHD_ltest_val<-SHD_skeleton(estimated_skeleton, IS$gTrues)
+    SHD_ltest_val<-scoreFct(estimated_skeleton, IS$gTrues)
 
     estimated_skeleton<-estimate_skeleton(ID$Rs,ID$Ns, method="mean")
-    SHD_mean_val<-SHD_skeleton(estimated_skeleton, IS$gTrues)
+    SHD_mean_val<-scoreFct(estimated_skeleton, IS$gTrues)
     
     estimated_skeleton<-estimate_skeleton(ID$Rs,ID$Ns, method="median")
-    SHD_median_val<-SHD_skeleton(estimated_skeleton, IS$gTrues)
+    SHD_median_val<-scoreFct(estimated_skeleton, IS$gTrues)
+    
+    # baseline from chowLiu on only observational data
+    maxNSample = as.integer(floor(totalSmpl/nds))
+      # if nsample not evenly distributed on all datasets, ensure that baseline fair
+    CL<-chowLiu(ID$Xs[[1]][1:maxNSample,])
+    estimated_skeleton<-get.adjacency(CL)
+    SHD_baseObs <-scoreFct(estimated_skeleton, IS$gTrues)
+    
+    # baseline from chowLiu on all data treating interventional as observational data
+    Xall = Reduce(rbind, ID$Xs,c())
+    CovAll = sample.cov(Xall)
+    Rall = cov2cor(CovAll)
+    CL<-chowLiu(Rall)
+    estimated_skeleton<-get.adjacency(CL)
+    SHD_baseAll <-scoreFct(estimated_skeleton, IS$gTrues)
     
     # return results as vector
-    res <- c(SHD_ltest_val,SHD_mean_val,SHD_median_val)
+    res <- c(SHD_ltest_val,SHD_mean_val,SHD_median_val,SHD_baseObs,SHD_baseAll)
     return(res)
   })
   
   # create nice result data frame
-  df_median <- df_mean <- df_ltest <- df_params
+  df_median <- df_mean <- df_ltest <- df_baseObs <- df_baseAll <- df_params
   df_ltest$method <- "ltest"
   df_ltest$SHD <- vals[,1]
   df_mean$method <- "mean"
   df_mean$SHD <- vals[,2]
   df_median$method <- "median"
   df_median$SHD <- vals[,3]
-  df <- rbind(df_ltest,df_mean,df_median)
-  
-  # save results in one variable
-  compRes$params <- df_params
-  compRes$df_vals <- df
-  compRes$comment <- comment
-  if(! exists("allResults")) {allResults = list()}
-  allResults <- append(allResults,list(compRes))
-  
-  # close parallel cluster
-  # parallel::stopCluster(cl = my.cluster)
+  df_baseObs$method = "baseObs"
+  df_baseObs$SHD = vals[,4]
+  df_baseAll$method = "baseAll"
+  df_baseAll$SHD = vals[,5]
+  df <- rbind(df_ltest,df_mean,df_median,df_baseObs,df_baseAll)
   
   return(prepare_df_plot(df))
 }

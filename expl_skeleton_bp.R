@@ -1,10 +1,13 @@
 # setup
 labelBoth = labeller(.default=label_both)
 
-# figure 1 left
+#------------figure 1 -----
+p = 20
+nSamples = 400
+# left
 df_params <- expand.grid(
-  tsize = c(20),
-  totalSamples = c(70,200,500),
+  tsize = c(p),
+  totalSamples = c(70,100,200),
   interventionSize = c(1),
   ndatasets = c(21),
   k = c(1:20),
@@ -12,13 +15,13 @@ df_params <- expand.grid(
   kindOfIntervention = c("perfect"),
   ensureDiff = TRUE
 )
-l <- skeletonExploration(df_params,allResults); df_plot=l$df; plot_str=l$str
+l <- skeletonExploration(df_params)
 l001 = l
 
-# figure 1 middle
+# middle
 df_params <- expand.grid(
-  tsize = c(20),
-  totalSamples = c(70),
+  tsize = c(p),
+  totalSamples = c(nSamples),
   interventionSize = c(1),
   ndatasets = c(2,11,21),
   k = c(1:20),
@@ -26,13 +29,13 @@ df_params <- expand.grid(
   kindOfIntervention = c("perfect"),
   ensureDiff = TRUE
 )
-l <- skeletonExploration(df_params,allResults); df_plot=l$df; plot_str=l$str
+l <- skeletonExploration(df_params); 
 l002 = l
 
-# figure 1 right
+# right
 df_params <- expand.grid(
-  tsize = c(20),
-  totalSamples = c(70),
+  tsize = c(p),
+  totalSamples = c(nSamples),
   interventionSize = c(1,2,4),
   ndatasets = c(21),
   k = c(1:20),
@@ -40,7 +43,7 @@ df_params <- expand.grid(
   kindOfIntervention = c("perfect"),
   ensureDiff = TRUE
 )
-l <- skeletonExploration(df_params,allResults); df_plot=l$df; plot_str=l$str
+l <- skeletonExploration(df_params);
 l003 = l
 
 # plot figures
@@ -48,23 +51,30 @@ f001 = ggplot(l001$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot
 f002 = ggplot(l002$df, aes(ndatasets,SHD,fill=factor(method))) + geom_boxplot()
 f003 = ggplot(l003$df, aes(interventionSize,SHD,fill=factor(method))) + geom_boxplot()
 
-
 # figure 1: merge figure together
-f004 = (f001 +labs(title=NULL) +theme(legend.position = "none")) +
+(f004 = (f001 +labs(title=NULL) +theme(legend.position = "none")) +
   (f002 +labs(title=NULL) +theme(legend.position = "none")) +
   (f003 +labs(title=NULL, fill="aggr fct")) +
-  plot_layout(nrow = 1)
-
-f004
+  plot_layout(nrow = 1) + plot_annotation(title=l003$str))
 
 
 
 
 
-
-
-
-
+# plot reference figure for figure 1
+df_params <- expand.grid(
+  tsize = c(100),
+  totalSamples = c(100),
+  interventionSize = c(1),
+  ndatasets = c(21),
+  k = c(1:20),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE
+)
+l <- skeletonExploration(df_params);
+ggplot(l$df, aes(totalSamples,SHD,fill=factor(method)))+geom_boxplot() +
+  labs(title=l$str)
 
 
 
@@ -214,33 +224,6 @@ ggplot(df_plot, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot() +
 
 
 
-# create baseline boxplot (Eventually incorrect!)
-warning("The following code still needs to be double-checked!")
-df_baseline <- expand.grid(
-  tsize = c(100,300),
-  totalSamples = ceiling(200/c(2,3,6,9,12,15)),
-  k = 1:20
-)
-vals <- foreach(
-  p = df_baseline$tsize,
-  s = df_baseline$totalSamples,
-  k = df_baseline$k,
-  .combine = 'c',
-  .verbose = TRUE
-) %do% {
-  # generate graph & samples
-  IS <- isetting(p, 1, 0, c(), s)
-  G <- graph_from_adjacency_matrix(IS$gTrued)
-  ID <- interventionalData(G,IS$L,IS$targetsI)
-  
-  # calculate SHD
-  CL<-chowLiu(ID$Rs[[1]])
-  E_e<-get.edgelist(CL)
-  estimated_skeleton<-get.adjacency(CL)
-  SHD<-SHD_skeleton(estimated_skeleton, IS$gTrues)
-
-  return(SHD)
-}
 df_baseline$SHD <- vals
 df_plot <- df_baseline
 df_plot$totalSamples <- factor(df_baseline$totalSamples, levels=sort(unique(df_baseline$totalSamples),decreasing=TRUE))
