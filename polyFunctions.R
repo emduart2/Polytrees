@@ -1121,20 +1121,14 @@ F_test<-function(Xobsv,Xint){
   Yi<-matrix(cbind(rep(1,nrow(Xint)),Xint[,2]),nrow=nrow(Xint),ncol=2)
   Yo<-matrix(cbind(rep(1,nrow(Xobsv)),Xobsv[,2]),nrow=nrow(Xobsv),ncol=2)
   bo<-solve((t(Xo)%*%Xo))%*%t(Xo)%*%Yo[,2]
-  bi<-solve((t(Xi)%*%Xi))%*%t(Xi)%*%Yi[,2]
   nI<-nrow(Xi)
   nO<-nrow(Xo)
-  eI<-Yi[,2]-Xi%*%bi
+  D<-Yi[,2]-Xi%*%bo # Difference between Obsv Yi and estimated Yihat using the OLS estimator for Yo,Xo
+  SigmaD<- Xi%*%solve(t(Xo)%*%Xo)%*%t(Xi) +diag(1,nrow=nI) 
   eO<-Yo[,2]-Xo%*%bo
-  VI<-t(eI)%*%eI ## residual sum of squares if the interv regression
-  VO<-t(eO)%*%eO # residual sum of squares of the observed regression
-  R<-(nO-1)/(nI+nO-2) # weighting ratio for the Obsv sample, (1-R) for the int sample
-  V<- (R/VO)*t(Yo[,2])%*%Yo[,2]+ (1-R)/VI*t(Yi[,2])%*%Yi[,2]-
-    ((R/VO)*t(Yo[,2])%*%Xo[,2]+ (1-R)/VI*t(Yi[,2])%*%Yi[,2])%*%solve(R/VO*t(Xo[,2])%*%Xo[,2]
-                                                                     + (1-R)/VI*t(Yi[,2])%*%Yi[,2])%*%(R/VO*t(Xo[,2])%*%Yo[,2]+ (1-R)/VI*t(Xi[,2])%*%Yi[,2])
-  r<-nO+nI-2
-  C<-r*(V-1)
-  p_val<-pf(C,1,r,lower.tail = FALSE)
+  sigmaOhat<-(t(eO)%*%eO)/(nO-2) # variance of of the observed regression
+  Q<-t(D)%*%SigmaD%*%D/(sigmaOhat*nrow(Xi))
+  p_val<-pf(Q,nI,nO-2, lower.tail=FALSE,log.p = FALSE)
   return(p_val)
 }
 
