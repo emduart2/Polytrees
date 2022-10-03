@@ -3,7 +3,7 @@ labelBoth = labeller(.default=label_both)
 
 #------------figure 1 -----
 p = 20
-nSamples = 400
+nSamples = 200
 # left
 df_params <- expand.grid(
   tsize = c(p),

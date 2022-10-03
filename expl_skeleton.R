@@ -1,6 +1,5 @@
 library(foreach)
 library(utils)
-library(progressr)
 
 # computes the SHD of two skeletons given as (symmetric) adjacency
 # matrices. If number of nodes larger three and the skeletons are both

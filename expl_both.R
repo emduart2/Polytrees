@@ -97,6 +97,7 @@ bothExploration <- function(df_params,methods){
         # assign outputs
         gies_est = as(gies.fit$essgraph,"graphNEL")
         shd_all = shd(as(as_adjacency_matrix(G),"graphNEL"), gies_est)
+        sid = SID(as(as_adjacency_matrix(G),"graphNEL"), gies_est)
         shd_skel = NaN
         time_skel = 0
         
@@ -117,9 +118,10 @@ bothExploration <- function(df_params,methods){
           sdh_all = NaN
         } else {
           shd_all = shd(est, true_i_cpdag)
+          sid = SID(est, true_i_cpdag)
         }
       }
-      res[i,] = c(shd_all, shd_skel, time_ort, time_skel, ID$edgesIntervened)
+      res[i,] = c(shd_all, shd_skel, time_ort, time_skel, sid)
     }
 
     return(res)
@@ -136,7 +138,7 @@ bothExploration <- function(df_params,methods){
     df_tmp$time_ort = tmp[,3]
     df_tmp$time_skel = tmp[,4]
     df_tmp$time_all = df_tmp$time_ort + df_tmp$time_skel
-    df_tmp$edgIntv = tmp[,5]
+    df_tmp$sid = tmp[,5]
     df = rbind(df,df_tmp)
   }
   

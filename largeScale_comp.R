@@ -228,5 +228,13 @@ l317 = bothExploration(df_params,methods)
 
 
 # -------- still need to compute
-# fig 1 with SID 
+# fig 1 with SID
+
+
+
+
+
+#---- large Scale final ----
+
+
 

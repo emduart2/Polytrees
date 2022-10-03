@@ -177,8 +177,7 @@ df_params <- expand.grid(
   k = c(1:20),
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
-  conservative = FALSE,
-  estimateSkeleton = c("FALSE")
+  conservative = FALSE
 )
 l <- orientationExploration(df_params,allResOrientation); df_plot=l$df; plot_str=l$str
 l100 = l
@@ -195,8 +194,7 @@ df_params <- expand.grid(
   k = c(1:20),
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
-  conservative = FALSE,
-  estimateSkeleton = c("FALSE")
+  conservative = FALSE
 )
 l <- orientationExploration(df_params,allResOrientation); df_plot=l$df; plot_str=l$str
 l101 = l
@@ -226,7 +224,6 @@ df_params <- expand.grid(
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
   ensureDiff = TRUE,
-  estimateSkeleton = c("FALSE")
 )
 l <- orientationExploration(df_params,allResOrientation); df_plot=l$df; plot_str=l$str
 l104 = l
@@ -244,7 +241,6 @@ df_params <- expand.grid(
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
   ensureDiff = TRUE,
-  estimateSkeleton = c("FALSE")
 )
 l <- orientationExploration(df_params,allResOrientation); df_plot=l$df; plot_str=l$str
 l105 = l
@@ -265,7 +261,6 @@ df_params <- expand.grid(
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
   ensureDiff = TRUE,
-  estimateSkeleton = c("FALSE")
 )
 # l <- orientationExploration(df_params,allResOrientation); df_plot=l$df; plot_str=l$str
 l106 = l
@@ -283,7 +278,6 @@ df_params <- expand.grid(
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
   ensureDiff = TRUE,
-  estimateSkeleton = c("FALSE")
 )
 # l <- orientationExploration(df_params,allResOrientation); df_plot=l$df; plot_str=l$str
 l107 = l
@@ -292,3 +286,32 @@ l107 = l
 
 
 
+# with final version
+df_params <- expand.grid(
+  tsize = c(100),
+  totalSamples = c(500,1000,3000),
+  interventionSize = c(1),
+  ndatasets = c(25)+1,
+  k = c(1:20),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE,
+  alpha = 0.05
+)
+l <- orientationExploration(df_params, scoreFct = pcalg::shd, sFctName = "SHD")
+
+
+
+# with final version
+df_params <- expand.grid(
+  tsize = c(10),
+  totalSamples = c(70),
+  interventionSize = c(1),
+  ndatasets = c(10)+1,
+  k = c(1:3),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE,
+  alpha = 0.05
+)
+l <- orientationExploration(df_params, sFctName = "SHD")
