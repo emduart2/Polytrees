@@ -100,7 +100,7 @@ estimate_orientations <- function(p,Covlist,Ilist,Nlist,ESkel,lC,thres,procedure
 # - to execute in parallel, uncomment corresponding code blocks and change
 #   "%do%" into "%dopar%"
 #   WARNING: parallel execution might run into problem on windows machines!
-orientationExploration <- function(df_params,allResults=list(), allOneNodeIntv=FALSE){
+orientationExploration <- function(df_params){
   
   # main (parallel) computation loop
   # (if parallel not wished, just change %dopar% into %do%)
@@ -229,10 +229,6 @@ orientationExploration <- function(df_params,allResults=list(), allOneNodeIntv=F
   df <- rbind(df_1simp,df_1,df_2simp,df_2,df_3simp,df_3)
   
   # save results in one variable
-  compRes$params <- df_params
-  compRes$df_vals <- df
-  if(! exists("allResults")) {allResults = list()}
-  allResults <- append(allResults,list(compRes))
   l = prepare_df_plot(df)
   return(l)
 }
