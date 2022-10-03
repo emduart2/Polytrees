@@ -927,7 +927,6 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
         for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # here e2 is ind, e1 is the dep
         Xe1noe2<-Xe1noe2[-which(sapply(Xe1noe2, is.null))]
         Xnoe1e2<-Xnoe1e2[-which(sapply(Xnoe1e2, is.null))]
-        print("Two tests")
         for(i in c(1:length(Xe1noe2))){ # These are the p_values to test e1->e2
           p_val<-F_test(Xobsv,Xe1noe2[[i]])
           p_vals_t1<-cbind(p_vals_t1,p_val)
@@ -936,8 +935,6 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
           p_val<-F_test(cbind(Xobsv[,2],Xobsv[,1]),Xnoe1e2[[i]]) # The order of the columns is swapped here
           p_vals_t2<-cbind(p_vals_t2,p_val)
         }
-        print(length(p_vals_t1))
-        print(length(p_vals_t2))
         mint1<-min(p_vals_t1)
         mint2<-min(p_vals_t2)
         if(mint1<mint2 & mint1<alpha/length(Ie1noe2)){O<-rbind(O,c(e2,e1))}
@@ -948,15 +945,12 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
         # the order of the two columns matters
         for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} 
         Xe1noe2<-Xe1noe2[-which(sapply(Xe1noe2, is.null))]
-        print("One test e1 to e2")
         p_vals_t1<-c()
         for(i in c(1:length(Xe1noe2))){ # These are the p_values to test e1->e2
           p_val<-F_test(Xobsv,Xe1noe2[[i]])
           p_vals_t1<-cbind(p_vals_t1,p_val)
         }
         c<-which(p_vals_t1<  alpha/length(Ie1noe2))
-        print("C info")
-        print(length(c))
         if (length(c)==0){U<-rbind(U,c(e1,e2))}
         else {O<-rbind(O,c(e2,e1))}
       }
@@ -964,13 +958,11 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
         for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))}
         
         Xnoe1e2<-Xnoe1e2[-which(sapply(Xnoe1e2, is.null))]
-        print("One test e2 to e1")
         p_vals_t2<-c()
         for(i in c(1:length(Xnoe1e2))){ # These are the p_values to test e2->e1
           p_val<-F_test(cbind(Xobsv[,2],Xobsv[,1]),Xnoe1e2[[i]])
           p_vals_t2<-cbind(p_vals_t2,p_val)
         }
-        print(p_vals_t2)
         c<-which(p_vals_t2<alpha/length(Inoe1e2))
         if (length(c)==0){U<-rbind(U,c(e1,e2))}
         else {O<-rbind(O,c(e1,e2))}
@@ -992,38 +984,16 @@ dropFirst<-function(x){
   return(x)
 }
 #----------
-#---- GroupData
-# X = a list of data sets
-# This makes one single data set from all the X's
-groupD<-function(X){
-  Xregroup<-c()
-  for (i in X){
-    Xregroup<-rbind(Xregroup,i)
-  }
-  return(Xregroup)
-}
-#--- regCoeff
-#-- Quick function to compute the regression coeff. Only works for vectors
-# for matrices we need to change to matrix multiplication and inverse of a matrix.
-# x= predictor variable y= response variable
-regCoeff<-function(x,y){
-  xbar<-mean(x)
-  ybar<-mean(y)
-  sxx<-sum((x-xbar)^2)
-  syy<-sum((y-ybar)^2)
-  sxy<-sum((x-xbar)*(y-ybar))
-  b<-(1/sxx)*sxy
-  a<-ybar-b*xbar
-  return(c(a,b))
-}
-#---------------
-#---- F_test -- Based on Chow's test 1960
+
+#---- F_test -- Based on Weerahandi 1987 - Test of regression coefficients with unequal variances
 #------
 # If F_test receives Xe1e2 it means we test e1->e2 i.e if e1 is a causal predictor for e2
-# If F_test receives Xe2e1 it means we test e2->e1
-# INPUT: This function receives a list of data sets with two columns. To test the
+#
+# INPUT: This function receives in the first entry an observational data set, 
+# in the second entry a list of data sets in which e1 is intervened on To test the
 # hypothesis that the first column c1 is a parent of the second column c2 using comparison
-# of regression coefficients.
+# of regression coefficients. The output is a list of pvalues, one for each data set
+# in the secon list
 # Test c1->c2. 
 # OUTPUT: A list of p-values
 F_test<-function(Xobsv,Xint){
@@ -1032,19 +1002,23 @@ F_test<-function(Xobsv,Xint){
   Xo<-matrix(cbind(rep(1,nrow(Xobsv)),Xobsv[,1]),nrow=nrow(Xobsv),ncol=2)
   Yi<-matrix(cbind(rep(1,nrow(Xint)),Xint[,2]),nrow=nrow(Xint),ncol=2)
   Yo<-matrix(cbind(rep(1,nrow(Xobsv)),Xobsv[,2]),nrow=nrow(Xobsv),ncol=2)
-  regCoeffObsv<-regCoeff(Xo[,2],Yo[,2]) # OLS estimator computed on Xobsv
-  D<-matrix(Yi[,2]-(regCoeffObsv[1]+regCoeffObsv[2]*Xi[,2]),nrow = nrow(Yi),ncol=1)
+  bo<-solve((t(Xo)%*%Xo))%*%t(Xo)%*%Yo[,2]
+  bi<-solve((t(Xi)%*%Xi))%*%t(Xi)%*%Yi[,2]
   nI<-nrow(Xi)
   nO<-nrow(Xo)
-  SigmaD<- Xi%*%solve(t(Xo)%*%Xo)%*%t(Xi) +diag(1,nrow=nI) # covariance matrix of D
-  sigmahatYo<-var(Yo[,2]-(regCoeffObsv[1]+regCoeffObsv[2]*Xo[,2]))
-  Q<-t(D)%*%solve(SigmaD)%*%D/(sigmahatYo*nI)
-  p_val<-pf(Q,nI,nO-2, lower.tail=FALSE,log.p = FALSE)
-  print("This is a pvalue")
-  print(p_val)
+  eI<-Yi[,2]-Xi%*%bi
+  eO<-Yo[,2]-Xo%*%bo
+  VI<-t(eI)%*%eI ## residual sum of squares if the interv regression
+  VO<-t(eO)%*%eO # residual sum of squares of the observed regression
+  R<-(nO-1)/(nI+nO-2) # weighting ratio for the Obsv sample, (1-R) for the int sample
+  V<- (R/VO)*t(Yo[,2])%*%Yo[,2]+ (1-R)/VI*t(Yi[,2])%*%Yi[,2]-
+    ((R/VO)*t(Yo[,2])%*%Xo[,2]+ (1-R)/VI*t(Yi[,2])%*%Yi[,2])%*%solve(R/VO*t(Xo[,2])%*%Xo[,2]
+                                                                     + (1-R)/VI*t(Yi[,2])%*%Yi[,2])%*%(R/VO*t(Xo[,2])%*%Yo[,2]+ (1-R)/VI*t(Xi[,2])%*%Yi[,2])
+  r<-nO+nI-2
+  C<-r*(V-1)
+  p_val<-pf(C,1,r,lower.tail = FALSE)
   return(p_val)
 }
-#--------- end of F_test
 
 
 ##Function that computes the i-cpdag
