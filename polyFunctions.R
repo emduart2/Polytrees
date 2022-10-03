@@ -904,8 +904,8 @@ I_env<-function(E,interventionTargets){
 # Xs = list of data sets
 # Ilist= list of interventions settings with sample sized
 # alpha = a significance level
-# meth= "min" or "max", p-value method, reject the one with lowest p-value, or accept
-#        the one highest p values.
+# meth= "min", reject the one with lowest p-value, or accept
+#       # right now only min is implemented, there are perhaps other possible ways to do this
 pairs<-function(E,Xs,Ilist,alpha,meth="min"){
   O<-c()
   U<-c()
@@ -956,7 +956,6 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
       }
       else if(length(Ie1noe2)==0 & length(Inoe1e2)>0){ # Can only use the test for e2->e1
         for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))}
-        
         Xnoe1e2<-Xnoe1e2[-which(sapply(Xnoe1e2, is.null))]
         p_vals_t2<-c()
         for(i in c(1:length(Xnoe1e2))){ # These are the p_values to test e2->e1
@@ -970,7 +969,6 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
       }
       else{
         U<-rbind(U,c(e1,e2))
-        print("No test")
         }
     }
   }
