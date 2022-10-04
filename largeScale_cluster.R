@@ -1,14 +1,10 @@
 # TODO add install packages and load packages
-source("polyFunctions.R")
-source("Likelihood.R")
-source("expl_skeleton.R")
-source("expl_orientation.R")
-source("expl_both.R")
+source("setup.R")
 
 # notes: 
 # - skeletonExploration now includes baseline plots (hence replot fig1)
 # - high-dim: 1000 nodes, 51 datasets (5%), interventionsize 1
-kmax = 20
+kmax = 50
 
 #---- fig 1 low-dim with all intervention types ----
 p = 20
@@ -93,7 +89,7 @@ df_params <- expand.grid(
   tsize = c(p),
   totalSamples = c(100,200,500),
   interventionSize = c(1,2,4),
-  ndatasets = c(51),
+  ndatasets = c(21),
   k = c(1:kmax),
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
@@ -112,7 +108,7 @@ df_params <- expand.grid(
   tsize = c(1000),
   totalSamples = c(100,200,500),
   interventionSize = c(2),
-  ndatasets = c(11,51,101),
+  ndatasets = c(21),
   k = c(1:kmax),
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
@@ -127,7 +123,7 @@ df_params <- expand.grid(
   tsize = c(1000),
   totalSamples = c(100,200,500),
   interventionSize = c(2),
-  ndatasets = c(51),
+  ndatasets = c(21),
   k = c(1:kmax),
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
