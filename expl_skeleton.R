@@ -98,7 +98,10 @@ skeletonExploration <- function(df_params, scoreFct = SHD_skeleton){
     # baseline from chowLiu on only observational data
     maxNSample = as.integer(floor(totalSmpl/nds))
       # if nsample not evenly distributed on all datasets, ensure that baseline fair
-    CL<-chowLiu(ID$Xs[[1]][1:maxNSample,])
+    X = ID$Xs[[1]][1:maxNSample,]
+    Cov = sample.cov(X)
+    R = cov2cor(Cov)
+    CL<-chowLiu(R)
     estimated_skeleton<-get.adjacency(CL)
     SHD_baseObs <-scoreFct(estimated_skeleton, IS$gTrues)
     
