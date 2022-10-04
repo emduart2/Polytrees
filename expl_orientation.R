@@ -14,8 +14,9 @@ library(igraph)
 #   sdatasets = list(c()),
 #   kindOfIntervention = c("random","imperfect","inhibitory","perfect"),
 #   ensureDiff = TRUE,
-#   alpha = 0.05
+#   alpha = c(0.05)
 # )
+# methods_all = list(c("GIES"),c("mean","1"),c("true","2"))
 
 # setup parallel cluster
 # n.cores <- parallel::detectCores() - 1
@@ -42,7 +43,7 @@ estimate_orientations <- function(
     return(i_cpdag_graph)
   }
   
-  # procedure 1 (with trycatch for failure of optimization)
+  # procedure 1
   if(procedure == "1"){
     dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E,lC,thres,method="nothing"
                                ,pw_method=pw_method,alpha,Xlist)
@@ -60,7 +61,7 @@ estimate_orientations <- function(
     return(i_cpdag_graph)
   } 
   
-  # procedure 2 (with trycatch for failure of optimization)
+  # procedure 2
   if(procedure == "2"){
     dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E,p,method="nothing",
                                    pw_method=pw_method,alpha,Xlist)
@@ -79,7 +80,7 @@ estimate_orientations <- function(
     return(i_cpdag_graph)
   } 
   
-  # procedure 3 (with catch for failure of optimization)
+  # procedure 3
   if(procedure == "3"){
     dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E,p,method="nothing"
                              ,pw_method=pw_method,alpha,Xlist)
@@ -93,15 +94,14 @@ estimate_orientations <- function(
 
 
 # notes:
-# - to execute in parallel, uncomment corresponding code blocks and change
-#   "%do%" into "%dopar%"
+# - to execute in parallel, initialize cluster and change "%do%" into "%dopar%"
 #   WARNING: parallel execution might run into problem on windows machines!
 orientationExploration <- function(
     df_params, 
     scoreFct_all = list(pcalg::shd, SID), 
-    sFctNames_all=c("SHD","SID"),
-    procedures_all = c("1","1simp","2","2simp","3","3simp"),
-    pw_methods_all = c("BIC","TEST")){
+    sFctNames_all = c("SHD","SID"),
+    methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3"),c("gtruth","3")),
+    pw_methods_all = c("BIC")){
   
   # main (parallel) computation loop
   # (if parallel not wished, just change %dopar% into %do%)
@@ -115,6 +115,8 @@ orientationExploration <- function(
     kindOfIntervention = df_params$kindOfIntervention,
     ensureDiff = df_params$ensureDiff,
     alpha = df_params$alpha,
+    use_dags = df_params$use_dags,
+    dag_nbh = df_params$dag_nbh,
     .combine = 'rbind',
     .verbose=TRUE,
     .errorhandling = "stop",
@@ -131,7 +133,8 @@ orientationExploration <- function(
     }
     
     # create setting
-    IS <- isetting(p,nds,iss,sd,totalSmpl, ensureDiff = ensureDiff)
+    IS <- isetting(p,nds,iss,sd,totalSmpl, ensureDiff = ensureDiff, 
+                   use_dags=use_dags, dag_nbh=dag_nbh)
     G<-graph_from_adjacency_matrix(IS$gTrued)
     ID<-interventionalData(G,IS$L,IS$targetsI)
     Covlist<-ID$Covs
@@ -145,22 +148,62 @@ orientationExploration <- function(
     true_i_cpdag<-dag2essgraph(as_graphnel(G),Ilist)
     thres<-0.5*log(sum(Nlist))*length(Ilist)
     lC<-Imatrix(C_list,ID$Ns)
-    E <- get.edgelist(G)
     
     # computations
-    res = array(NaN, length(procedures_all) * length(pw_methods_all) * length(scoreFct_all))
+    res = array(NaN, length(methods_all) * length(pw_methods_all) * (1+length(scoreFct_all)))
     i = 1
-    for(proc in procedures_all){
+    for(m in methods_all){
       for(pw in pw_methods_all){
         
-        # estimate orientation
-        est = tryCatch({
-          estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
-                                       procedure=proc,pw_method=pw)},
-          error = function(e){NULL})
-        
-        # score estimation
-        j = 0
+        # estimate essential graph
+        if(m[1] == "GIES") {
+          
+          # parse into GIES setting
+          allSamples = matrix(0, totalSmpl, p)
+          targetindex = array(0, totalSmpl)
+          targets = vector("list", length(IS$targetsI))
+          a = b = 1
+          for(j in 1:length(IS$targetsI)){
+            b <- a + IS$targetsI[[j]][1]-1
+            allSamples[a:b,] = ID$Xs[[j]]
+            targetindex[a:b] = j
+            targets[[j]] = IS$targetsI[[j]][-1]
+            a <- b+1
+          }
+          setting_GIES = new("GaussL0penIntScore", 
+                             data=allSamples, 
+                             targets=targets, 
+                             target.index=targetindex)
+          
+          # GIES estimate
+          s = Sys.time()
+          gies.fit = gies(setting_GIES)
+          t = as.numeric(Sys.time() - s) * 1000
+          est = as(gies.fit$essgraph,"graphNEL")
+          
+        } else {
+          
+          # estimate skeleton
+          s = Sys.time()
+          if( m[1] == "gtruth") {
+            E <- get.edgelist(G)
+          } else {
+            skelEst = estimate_skeleton(ID$Rs,ID$Ns, method=m[1])
+            E <- get.edgelist(graph_from_adjacency_matrix(skelEst))
+          }
+          
+          # estimate orientations
+          est = tryCatch({
+            estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
+                                  procedure=m[2],pw_method=pw)},
+            error = function(e){NULL})
+          t = as.numeric(Sys.time() - s) * 1000
+        }
+
+
+        # score estimation and add to results
+        res[i] = t # add runtime to results
+        j = 1
         for(sf in scoreFct_all){
           if( is.null(est)){
             out = NaN
@@ -177,16 +220,19 @@ orientationExploration <- function(
   })
   
   # create nice result data frame
-  dfs = vector("list", length(procedures_all) * length(pw_methods_all) * length(scoreFct_all))
+  dfs = vector("list", length(methods_all) * length(pw_methods_all))
   i = 1
-  for(proc in procedures_all){
+  for(m in methods_all){
     for(pw in pw_methods_all){
       dfs[[i]] <- df_params
-      dfs[[i]]$method <- proc
+      dfs[[i]]$aggrFct <- m[1]
+      dfs[[i]]$proc <- m[2]
       dfs[[i]]$pw_method <- pw
-      j = 0
+      
+      dfs[[i]]$time <- vals[,i]
+      j = 1
       for(sf in scoreFct_all){
-        dfs[[i]][,sFctNames_all[[j+1]]] <- vals[,i+j]
+        dfs[[i]][,sFctNames_all[[j]]] <- vals[,i+j]
         j = j+1
       }
       i = i + j
