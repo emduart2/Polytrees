@@ -3,22 +3,12 @@ library(utils)
 library(pcalg)
 library(igraph)
 
-# example parameter space to explore
-# (interventionSize >= 1 is the absolute value of nodes to intervene)
-# df_params <- expand.grid(
-#   tsize = c(100),
-#   totalSamples = c(300),
-#   interventionSize = c(1,10),
-#   ndatasets = c(10),
-#   k = c(1:20),
-#   sdatasets = list(c()),
-#   kindOfIntervention = c("random","imperfect","inhibitory","perfect"),
-#   ensureDiff = TRUE,
-#   alpha = c(0.05)
-# )
-# methods_all = list(c("GIES"),c("mean","1"),c("true","2"))
+#TODO add proper documentation!
 
-# setup parallel cluster
+#---- setup parallel clusters (optional) ----
+# to execute in parallel, uncomment corresponding code blocks and change
+#   "%do%" into "%dopar%"
+#   WARNING: parallel execution might run into problem on windows machines!
 # n.cores <- parallel::detectCores() - 1
 # my.cluster <- parallel::makeCluster(
 #   n.cores,
@@ -30,7 +20,22 @@ library(igraph)
 # parallel::stopCluster(cl = my.cluster)
 
 
-# function to estimate orientations (not used at the moment)
+#---- wrapper for estimating skeleton and orientations ----
+# estimates the skeleton from interventional data.
+# Inputs: Rs=list of sampled correlation matrices, Ns=samplesizes,
+#   method=computation method.
+estimate_skeleton <- function(Rs, Ns, method="mean"){
+  matr = switch(method,
+                mean = wmeanCorrels(Rs,Ns)$Rmean,
+                median = wmedianCorrels(Rs,Ns)$Rmedian,
+                ltest = Imatrix(Rs,Ns)
+  )
+  Cl = chowLiu(matr)
+  return(get.adjacency(Cl))
+}
+
+
+# function to estimate orientations 
 estimate_orientations <- function(
     p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,procedure="1",pw_method="BIC"){
   
@@ -93,10 +98,101 @@ estimate_orientations <- function(
 }
 
 
-# notes:
-# - to execute in parallel, initialize cluster and change "%do%" into "%dopar%"
-#   WARNING: parallel execution might run into problem on windows machines!
-orientationExploration <- function(
+
+
+#---- functions to explore performance on a large scale ----
+explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
+  # setup parallel cluster
+  # n.cores <- parallel::detectCores() - 1
+  # my.cluster <- parallel::makeCluster(
+  #   n.cores, 
+  #   type = "FORK"
+  # )
+  # doParallel::registerDoParallel(cl = my.cluster)
+  
+  # main (parallel) computation loop
+  # (if parallel not wished, just change %dopar% into %do%)
+  (vals <- foreach(
+    p = df_params$tsize,
+    totalSmpl = df_params$totalSamples,
+    intervSize = df_params$interventionSize,
+    nds = df_params$ndatasets,
+    k = df_params$k,
+    sd = df_params$sdatasets,
+    kindOfIntervention = df_params$kindOfIntervention,
+    ensureDiff = df_params$ensureDiff,
+    .packages = c("mpoly"),
+    .combine = 'rbind',
+    .verbose=TRUE
+  ) %do% {
+    # parse parameters
+    if(length(sd) == 1 && sd == -1) {
+      sd <- c()
+    } 
+    if(intervSize <1){
+      iss <- ceiling(p*intervSize)
+    } else {
+      iss <- intervSize
+    }
+    
+    # create setting and sample interventional correlation matrices
+    IS <- isetting(p,nds,iss,sd,totalSmpl, ensureDiff=ensureDiff)
+    G <- graph_from_adjacency_matrix(IS$gTrued)
+    ID <- interventionalData(G,IS$L,IS$targetsI,kindOfIntervention=kindOfIntervention)
+    
+    # compute deviation from true skeleton for 3 diff aggregation functions
+    estimated_skeleton<-estimate_skeleton(ID$Rs,ID$Ns,method="ltest")
+    SHD_ltest_val<-scoreFct(estimated_skeleton, IS$gTrues)
+    
+    estimated_skeleton<-estimate_skeleton(ID$Rs,ID$Ns, method="mean")
+    SHD_mean_val<-scoreFct(estimated_skeleton, IS$gTrues)
+    
+    estimated_skeleton<-estimate_skeleton(ID$Rs,ID$Ns, method="median")
+    SHD_median_val<-scoreFct(estimated_skeleton, IS$gTrues)
+    
+    # baseline from chowLiu on only observational data
+    maxNSample = as.integer(floor(totalSmpl/nds))
+    # if nsample not evenly distributed on all datasets, ensure that baseline fair
+    X = ID$Xs[[1]][1:maxNSample,]
+    Cov = sample.cov(X)
+    R = cov2cor(Cov)
+    CL<-chowLiu(R)
+    estimated_skeleton<-get.adjacency(CL)
+    SHD_baseObs <-scoreFct(estimated_skeleton, IS$gTrues)
+    
+    # baseline from chowLiu on all data treating interventional as observational data
+    Xall = Reduce(rbind, ID$Xs,c())
+    CovAll = sample.cov(Xall)
+    Rall = cov2cor(CovAll)
+    CL<-chowLiu(Rall)
+    estimated_skeleton<-get.adjacency(CL)
+    SHD_baseAll <-scoreFct(estimated_skeleton, IS$gTrues)
+    
+    # return results as vector
+    res <- c(SHD_ltest_val,SHD_mean_val,SHD_median_val,SHD_baseObs,SHD_baseAll)
+    return(res)
+  })
+  
+  # create nice result data frame
+  df_median <- df_mean <- df_ltest <- df_baseObs <- df_baseAll <- df_params
+  df_ltest$method <- "ltest"
+  df_ltest$SHD <- vals[,1]
+  df_mean$method <- "mean"
+  df_mean$SHD <- vals[,2]
+  df_median$method <- "median"
+  df_median$SHD <- vals[,3]
+  df_baseObs$method = "baseObs"
+  df_baseObs$SHD = vals[,4]
+  df_baseAll$method = "baseAll"
+  df_baseAll$SHD = vals[,5]
+  df <- rbind(df_ltest,df_mean,df_median,df_baseObs,df_baseAll)
+  
+  return(prepare_df_plot(df))
+}
+
+
+
+explore <- function(
     df_params, 
     scoreFct_all = list(pcalg::shd, SID), 
     sFctNames_all = c("SHD","SID"),
@@ -143,7 +239,7 @@ orientationExploration <- function(
     Nlist<-ID$Ns      
     C_list<-ID$Rs
     for(i in c(1:length(Covlist))){
-       Covlist[[i]]<-Covlist[[i]]*Nlist[i]
+      Covlist[[i]]<-Covlist[[i]]*Nlist[i]
     }
     true_i_cpdag<-dag2essgraph(as_graphnel(G),Ilist)
     thres<-0.5*log(sum(Nlist))*length(Ilist)
@@ -199,8 +295,8 @@ orientationExploration <- function(
             error = function(e){NULL})
           t = as.numeric(Sys.time() - s) * 1000
         }
-
-
+        
+        
         # score estimation and add to results
         res[i] = t # add runtime to results
         j = 1

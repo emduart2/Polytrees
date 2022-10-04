@@ -321,11 +321,33 @@ wmeanCorrels<-function(corrIs,nIs){
 #        ensureDiff= Boolean. If TRUE, ensures that all interventional targets
 #           are different. Default: TRUE
 #
+#        use_dags: Boolean. If TRUE, generate DAGs. If FALSE, generate Polytrees.
+#           Default: TRUE.
+#     
+#         dag_nbh: Numeric. The expected number of neighbours per node if DAGs requested.
 # If interventionsize==1 and sdatasets==c(), then you get the same output of "interventionalSetting" 
 # where proprI=totalsample/ndatsets
-isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,ensureDiff=TRUE){
-  g<-pruferwithskeletonOpt(p)
-  lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
+isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,
+                   ensureDiff=TRUE,use_dags=FALSE, dag_nbh=p/10){
+  
+  if(use_dags) {
+    
+    # generate DAGs
+    gOrig = randDAG(p, dag_nbh)
+    adj = as(gOrig, "matrix")
+    g = NULL
+    g$Directed = 1*(abs(adj) > 0)
+    g$Skeleton = 1* ((abs(adj) > 0) | t(abs(adj) > 0))
+    rownames(g$Directed) = colnames(g$Directed) =
+      rownames(g$Skeleton) = colnames(g$Skeleton) = NULL
+    lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
+  } else {
+    
+    # generate polytrees
+    g<-pruferwithskeletonOpt(p)
+    lambdaCoeffs<-coeffLambda(graph_from_adjacency_matrix(g$Directed))
+  }
+
 
   if(length(sdatasets)==0){
     s<-sdatasets

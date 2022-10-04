@@ -1,3 +1,8 @@
+# ----------------------
+# THIS FILE IS DEPRECATED
+# ----------------------
+
+
 # as fig 1 left
 df_params <- expand.grid(
   tsize = c(10),
