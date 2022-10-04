@@ -756,7 +756,7 @@ dir_i_or_first<-function(Covlist,Ilist,Nlist,C,thres,E,p,method,pw_method,alpha,
     E<-E[-which(d==1),]
     E<-matrix(E,ncol=2)
   }else{
-    out<-pairs(E,Xlist,alpha)
+    out<-pairs(E,Xlist,Ilist,alpha)
     E<-out$Ulist
     O<-out$Olist
   }
