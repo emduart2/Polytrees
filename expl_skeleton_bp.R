@@ -1,9 +1,20 @@
+# ----------------------
+# THIS FILE IS DEPRECATED
+# ----------------------
+
 # setup
+source("polyFunctions.R")
+source("Likelihood.R")
+source("expl_skeleton.R")
+source("expl_orientation.R")
+source("expl_both.R")
+library(patchwork)
 labelBoth = labeller(.default=label_both)
 
+
 #------------figure 1 -----
-p = 20
-nSamples = 400
+p = 100
+nSamples = 100
 # left
 df_params <- expand.grid(
   tsize = c(p),

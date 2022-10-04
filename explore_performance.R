@@ -324,7 +324,6 @@ explore <- function(
       dfs[[i]]$aggrFct <- m[1]
       dfs[[i]]$proc <- m[2]
       dfs[[i]]$pw_method <- pw
-      dfs[[i]]$method <- paste(m[1],m[2],pw,sep=',') # for easier grouping in plot
       
       dfs[[i]]$time <- vals[,i]
       j = 1
