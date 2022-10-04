@@ -341,3 +341,38 @@ explore <- function(
   l = prepare_df_plot(df)
   return(l)
 }
+
+
+# function to prepare the result data frame for plotting
+prepare_df_plot <- function(df){
+  # convert to factors/strings
+  df$totalSamples <- factor(df$totalSamples, levels=sort(unique(df$totalSamples),decreasing = FALSE))
+  df$interventionSize <- factor(df$interventionSize, levels=sort(unique(df$interventionSize),decreasing = FALSE))
+  df$ndatasets <- factor(df$ndatasets, levels=sort(unique(df$ndatasets),decreasing = FALSE))
+  df$tsize <- factor(df$tsize, levels=sort(unique(df$tsize),decreasing = FALSE))
+  df$sdatasets <- as.character(lapply(df$sdatasets, FUN=function(x){paste(x,collapse=", ")}))
+  
+  # create parameter strings
+  str = ""
+  if(length(unique(df$tsize))==1){
+    str = append(str,paste(", nodes: ", unique(df$tsize)))
+  }
+  if(length(unique(df$totalSamples))==1){
+    str = append(str,paste(", samples: ", unique(df$totalSamples)))
+  }
+  if(length(unique(df$interventionSize))==1){
+    str = append(str,paste(", interventionSize: ", unique(df$interventionSize)))
+  }
+  if(length(unique(df$ndatasets))==1){
+    str = append(str,paste(", ndatasets: ", unique(df$ndatasets)))
+  }
+  if(length(unique(df$kindOfIntervention))==1){
+    str = append(str,paste(", intervention: ", unique(df$kindOfIntervention)))
+  }
+  if(length(unique(df$conservative))==1){
+    str = append(str,paste(", conservative: ", unique(df$conservative)))
+  }
+  str <- paste(str,collapse="")
+  str <- substr(str,3,1000000L)
+  return(list(df=df,str=str))
+}
