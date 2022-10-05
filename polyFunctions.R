@@ -45,6 +45,7 @@ library(Matrix)
 library(graph)
 library(mpoly)
 library(sets)
+library(gap)
 #-------------------------
 
 # Function for calculating sample covariance matrix
@@ -1126,7 +1127,7 @@ dropFirst<-function(x){
 }
 #----------
 
-#---- F_test -- Based on Chow 1960- Test of regression coefficients with unequal variances
+#---- F_test -- Based on Chow 1960- Test of regression coefficients with modified dfs
 #------
 # If F_test receives Xe1e2 it means we test e1->e2 i.e if e1 is a causal predictor for e2
 #
@@ -1139,8 +1140,29 @@ dropFirst<-function(x){
 # OUTPUT: A list of p-values
 
 F_test<-function(Xobsv,Xint){
-  ct<-chow.test(Xobsv[,2],Xobsv[,1],Xint[,2],Xint[,1])
-  return(ct[[4]])
+  y1<-Xobsv[,2]
+  x1<-Xobsv[,1]
+  y2<-Xint[,2]
+  x2<-Xint[,1]
+  x<-rbind(x1,x2)
+  y<-rbind(y1,y2)
+  n1<-nrow(Xobsv)
+  n2<-nrow(Xint)
+  cx<-regCoeff(x,y)
+  cx1<-regCoeff(x1,y1)
+  cx2<-regCoeff(x2,y2)
+  S1<-sum((y-cx[1]-cx[2]*x)^2)
+  S2<-sum((y1-cx1[1]-cx1[2]*x1)^2)
+  S3<-sum((y2-cx2[1]-cx2[2]*x2)^2)
+  s1hatsq<-(1/(n1-2))*S2
+  s2hatsq<-(1/(n2-2))*S3
+  f<-((n1-2)*s1hatsq+(n2-2)*s2hatsq)^2/((n1-2)*s1hatsq^2+(n2-2)*s2hatsq^2)
+  den<-(S1-S2-S3)/2
+  num<-(S2+S3)/f
+  FFmod<-den/num
+  df1<-2
+  p_val<-pf(FFmod,df1,f,lower.tail = FALSE)
+  return(p_val)
 }
 
 ##Function that computes the i-cpdag
