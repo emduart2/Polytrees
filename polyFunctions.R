@@ -1064,6 +1064,7 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
       Xnoe1e2<- vector(mode='list', length=length(Inoe1e2))  # list to save the data sets relevant to test the direction e2->e1
       p_vals_t1<-c()
       p_vals_t2<-c()
+      
       if(length(Ie1noe2)>0 & length(Inoe1e2)>0){ # In this case we can test both directions
         for(k in Ie1noe2) {Xe1noe2<-append(Xe1noe2,list(cbind(Xs[[k]][,e1],Xs[[k]][,e2])))} # matters to perform the test e1 is indp var, e2 is dep
         for(k in Inoe1e2) {Xnoe1e2<-append(Xnoe1e2,list(cbind(Xs[[k]][,e2],Xs[[k]][,e1])))} # here e2 is ind, e1 is the dep
@@ -1093,7 +1094,7 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
           p_vals_t1<-cbind(p_vals_t1,p_val)
         }
         c<-which(p_vals_t1<  alpha/length(Ie1noe2))
-        if (length(c)==0){U<-rbind(U,c(e1,e2))}
+        if (length(c)==0){O<-rbind(O,c(e1,e2))}
         else {O<-rbind(O,c(e2,e1))}
       }
       else if(length(Ie1noe2)==0 & length(Inoe1e2)>0){ # Can only use the test for e2->e1
@@ -1105,7 +1106,7 @@ pairs<-function(E,Xs,Ilist,alpha,meth="min"){
           p_vals_t2<-cbind(p_vals_t2,p_val)
         }
         c<-which(p_vals_t2<alpha/length(Inoe1e2))
-        if (length(c)==0){U<-rbind(U,c(e1,e2))}
+        if (length(c)==0){O<-rbind(O,c(e2,e1))}
         else {O<-rbind(O,c(e1,e2))}
 
       }
@@ -1125,7 +1126,7 @@ dropFirst<-function(x){
 }
 #----------
 
-#---- F_test -- Based on Weerahandi 1987 - Test of regression coefficients with unequal variances
+#---- F_test -- Based on Chow 1960- Test of regression coefficients with unequal variances
 #------
 # If F_test receives Xe1e2 it means we test e1->e2 i.e if e1 is a causal predictor for e2
 #
@@ -1136,24 +1137,11 @@ dropFirst<-function(x){
 # in the secon list
 # Test c1->c2. 
 # OUTPUT: A list of p-values
-F_test<-function(Xobsv,Xint){
-  n<-length(Xobsv)
-  Xi<-matrix(cbind(rep(1,nrow(Xint)),Xint[,1]),nrow=nrow(Xint),ncol=2) # 
-  Xo<-matrix(cbind(rep(1,nrow(Xobsv)),Xobsv[,1]),nrow=nrow(Xobsv),ncol=2)
-  Yi<-matrix(cbind(rep(1,nrow(Xint)),Xint[,2]),nrow=nrow(Xint),ncol=2)
-  Yo<-matrix(cbind(rep(1,nrow(Xobsv)),Xobsv[,2]),nrow=nrow(Xobsv),ncol=2)
-  bo<-solve((t(Xo)%*%Xo))%*%t(Xo)%*%Yo[,2]
-  nI<-nrow(Xi)
-  nO<-nrow(Xo)
-  D<-Yi[,2]-Xi%*%bo # Difference between Obsv Yi and estimated Yihat using the OLS estimator for Yo,Xo
-  SigmaD<- Xi%*%solve(t(Xo)%*%Xo)%*%t(Xi) +diag(1,nrow=nI) 
-  eO<-Yo[,2]-Xo%*%bo
-  sigmaOhat<-(t(eO)%*%eO)/(nO-2) # variance of of the observed regression
-  Q<-t(D)%*%SigmaD%*%D/(sigmaOhat*nrow(Xi))
-  p_val<-pf(Q,nI,nO-2, lower.tail=FALSE,log.p = FALSE)
-  return(p_val)
-}
 
+F_test<-function(Xobsv,Xint){
+  ct<-chow.test(Xobsv[,2],Xobsv[,1],Xint[,2],Xint[,1])
+  return(ct[[4]])
+}
 
 ##Function that computes the i-cpdag
 #INPUT:   Ilist= list of interventional settings
