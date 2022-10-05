@@ -38,7 +38,7 @@ pairlikelihood<-function(Covlist,Ilist,Nlist,u,v){
   llike<-function(l){
     ll<-0
     for(i in c(1:length(notvlist))){
-      ll<-ll+(Nlist[notvlist[i]]/2)*log(suppressMessages(as.function(polys[[i]]))(l))
+      ll<-ll+(Nlist[notvlist[i]]/2)*log(abs(suppressMessages(as.function(polys[[i]]))(l)))
     }
     return(ll)
   }
@@ -63,7 +63,7 @@ pairlikelihood<-function(Covlist,Ilist,Nlist,u,v){
       b<-Covlist[[vlist[i]]][v,u]
       c<-Covlist[[vlist[i]]][v,v]
       
-      maxloglik<-maxloglik+(Nlist[vlist[i]]/2)*log(suppressMessages(as.function(mp(paste0(a," l l-",2*b," l+",c))))(b/a))
+      maxloglik<-maxloglik+(Nlist[vlist[i]]/2)*log(abs(suppressMessages(as.function(mp(paste0(a," l l-",2*b," l+",c))))(b/a)))
     }
   }
   for(i in c(1:l)){
@@ -116,7 +116,7 @@ tripletlikelihood_coll<-function(Covlist,Ilist,Nlist,u,v,w){
   llike<-function(l){
     ll<-0
     for(i in c(1:length(notvlist))){
-      ll<-ll+(Nlist[notvlist[i]]/2)*log(suppressMessages(as.function(polys[[i]]))(l))
+      ll<-ll+(Nlist[notvlist[i]]/2)*log(abs(suppressMessages(as.function(polys[[i]]))(l)))
     }
     return(ll)
   }
@@ -147,7 +147,7 @@ tripletlikelihood_coll<-function(Covlist,Ilist,Nlist,u,v,w){
       lambda_u<-(d*b-f*e/(a*b-f^2))
       lambda_w<-(e*a-f*d/(a*b-f^2))
       
-      maxloglik<-maxloglik+(Nlist[vlist[i]]/2)*log(suppressMessages(as.function(pol))(c(lambda_u,lambda_w)))
+      maxloglik<-maxloglik+(Nlist[vlist[i]]/2)*log(abs(suppressMessages(as.function(pol))(c(lambda_u,lambda_w))))
     }
   }
   for(i in c(1:l)){
@@ -195,7 +195,7 @@ tripletlikelihood_noncoll<-function(Covlist,Ilist,Nlist,u,v,w){
   llike<-function(l){
     ll<-0
     for(i in c(1:length(notvlist))){
-      ll<-ll+(Nlist[notvlist[i]]/2)*log(suppressMessages(as.function(polys[[i]]))(l))
+      ll<-ll+(Nlist[notvlist[i]]/2)*log(abs(suppressMessages(as.function(polys[[i]]))(l)))
     }
     return(ll)
   }
@@ -220,7 +220,7 @@ tripletlikelihood_noncoll<-function(Covlist,Ilist,Nlist,u,v,w){
       b<-Covlist[[vlist[i]]][v,u]
       c<-Covlist[[vlist[i]]][v,v]
       
-      maxloglik<-maxloglik+(Nlist[vlist[i]]/2)*log(suppressMessages(as.function(mp(paste0(a," l l-",2*b," l+",c))))(b/a))
+      maxloglik<-maxloglik+(Nlist[vlist[i]]/2)*log(abs(suppressMessages(as.function(mp(paste0(a," l l-",2*b," l+",c))))(b/a)))
     }
   }
   
@@ -253,7 +253,7 @@ tripletlikelihood_noncoll<-function(Covlist,Ilist,Nlist,u,v,w){
   llike<-function(l){
     ll<-0
     for(i in c(1:length(notwlist))){
-      ll<-ll+(Nlist[notwlist[i]]/2)*log(suppressMessages(as.function(polys[[i]]))(l))
+      ll<-ll+(Nlist[notwlist[i]]/2)*log(abs(suppressMessages(as.function(polys[[i]]))(l)))
     }
     return(ll)
   }
@@ -278,7 +278,7 @@ tripletlikelihood_noncoll<-function(Covlist,Ilist,Nlist,u,v,w){
       b<-Covlist[[wlist[i]]][w,v]
       c<-Covlist[[wlist[i]]][w,w]
       
-      maxloglik<-maxloglik+(Nlist[wlist[i]]/2)*log(suppressMessages(as.function(mp(paste0(a," l l-",2*b," l+",c))))(b/a))
+      maxloglik<-maxloglik+(Nlist[wlist[i]]/2)*log(abs(suppressMessages(as.function(mp(paste0(a," l l-",2*b," l+",c))))(b/a)))
     }
   }
   return(-maxloglik-0.5*log(sum(Nlist))*(3*length(Ilist)+length(vlist)+length(wlist)+2))
@@ -484,7 +484,7 @@ aftercollider_marginallikelihood<-function(Covlist,Ilist,Nlist,v){
   for(i in c(1:length(notvlist))){
     i_variance<-i_variance+Covlist[[notvlist[i]]][v,v]
   }
-  maxloglik<- -(NN/2)*log((1/NN)*i_variance)
+  maxloglik<- -(NN/2)*log((1/NN)*abs(i_variance))
   
   if(length(vlist)>0){
     for(i in c(1:length(vlist))){
@@ -541,7 +541,7 @@ aftercollider_condlikelihood<-function(Covlist,Ilist,Nlist,u,v){
     i_residual<-i_residual+suppressMessages(as.function(polys[[i]]))(i_reg_coef)
   }
   
-  maxloglik<- -(NN/2)*log((1/NN)*i_residual)
+  maxloglik<- -(NN/2)*log((1/NN)*abs(i_residual))
   
   
   if(length(vlist)>0){
@@ -551,7 +551,7 @@ aftercollider_condlikelihood<-function(Covlist,Ilist,Nlist,u,v){
       b<-Covlist[[vlist[i]]][v,u]
       c<-Covlist[[vlist[i]]][v,v]
       
-      maxloglik<-maxloglik-(Nlist[vlist[i]]/2)*log((1/Nlist[vlist[i]])*suppressMessages(as.function(mp(paste0(a," l l-",2*b," l+",c))))(b/a))
+      maxloglik<-maxloglik-(Nlist[vlist[i]]/2)*log((1/Nlist[vlist[i]])*abs(suppressMessages(as.function(mp(paste0(a," l l-",2*b," l+",c))))(b/a)))
     }
   }
   
