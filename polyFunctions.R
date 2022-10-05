@@ -202,6 +202,8 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
             } else if(kindOfIntervention == "imperfect"){
               if(rbinom(1,1,0.5)==1) {
                 coeff <- 0
+              } else {
+                coeff <- 0
               }
             } else if(kindOfIntervention == "inhibitory"){
               coeff <- LI[k,tI[j]] * 0.1

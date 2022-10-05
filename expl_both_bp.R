@@ -150,3 +150,145 @@ l314 <- bothExploration(df_params,methods);
     ggplot(l314$df, aes(totalSamples, time_all, fill = factor(method)))+
     geom_boxplot() + plot_layout(nrow=1,guides='collect')+
     plot_annotation(title=paste("nbh: 3.5, ",l314$str)))
+
+
+
+# check agains dags
+# check high-dim dags with different nbh
+df_params <- expand.grid(
+  tsize = c(50),
+  totalSamples = c(20,50,100),
+  interventionSize = c(2),
+  ndatasets = c(5),
+  k = c(1:20),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE,
+  alpha = c(0.05),
+  use_dags = TRUE,
+  dag_nbh = 4
+)
+l10 = explore(
+  df_params,
+  scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives), 
+  sFctNames_all = c("SHD","SID","TP","FP"),
+  methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3")),
+  pw_methods_all = c("BIC"))
+t1 = Sys.time()
+
+df_params <- expand.grid(
+  tsize = c(50),
+  totalSamples = c(20,50,100),
+  interventionSize = c(2),
+  ndatasets = c(5),
+  k = c(1:20),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE,
+  alpha = c(0.05),
+  use_dags = TRUE,
+  dag_nbh = 10
+)
+l11 = explore(
+  df_params,
+  scoreFct_all = list(pcalg::shd, SID,true_positives, false_positives), 
+  sFctNames_all = c("SHD","SID","TP","FP"),
+  methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3")),
+  pw_methods_all = c("BIC"))
+t2 = Sys.time()
+
+
+l=l10
+ggplot(l$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot() +
+  ggplot(l$df, aes(totalSamples,SID,fill=factor(method))) + geom_boxplot() +
+  ggplot(l$df, aes(totalSamples,TP,fill=factor(method))) + geom_boxplot() +
+  ggplot(l$df, aes(totalSamples,FP,fill=factor(method))) + geom_boxplot() +
+  ggplot(l$df, aes(totalSamples,time,fill=factor(method))) + geom_boxplot()+
+  plot_layout(ncol=3) + plot_annotation(title=l$str)
+
+
+l = l11
+ggplot(l$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot() +
+  ggplot(l$df, aes(totalSamples,SID,fill=factor(method))) + geom_boxplot() +
+  ggplot(l$df, aes(totalSamples,TP,fill=factor(method))) + geom_boxplot() +
+  ggplot(l$df, aes(totalSamples,FP,fill=factor(method))) + geom_boxplot() +
+  ggplot(l$df, aes(totalSamples,time,fill=factor(method))) + geom_boxplot()+
+  plot_layout(ncol=3) + plot_annotation(title=l$str)
+
+
+
+
+
+#-------- from here on with new explore function ----------
+# figure 2 with comparison
+# left
+df_params <- expand.grid(
+  tsize = c(20),
+  totalSamples = c(500),
+  interventionSize = c(2),
+  ndatasets = c(2,11,21),
+  k = c(1:1),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE,
+  alpha = 0.05,
+  use_dags = FALSE,
+  dag_nbh = 0
+)
+l1 <- explore(
+  df_params,
+  scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
+  sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
+  methods_all = list(c("gtruth","2"),c("gtruth","2simp"),c("gtruth","3"),c("gtruth","3simp")),
+  pw_methods_all = c("BIC","TEST"))
+
+
+# right
+df_params <- expand.grid(
+  tsize = c(20),
+  totalSamples = c(100,500,1000),
+  interventionSize = c(2),
+  ndatasets = c(21),
+  k = c(1:20),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE,
+  alpha = 0.05,
+  use_dags = FALSE,
+  dag_nbh = 0
+)
+l2 <- explore(
+  df_params,
+  scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
+  sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
+  methods_all = list(c("mean","1"),c("mean","1simp"),c("mean","2"),c("mean","2simp"),c("mean","3"),c("mean","3simp")),
+  pw_methods_all = c("BIC","TEST"))
+
+
+
+
+# plot figures
+df_params <- expand.grid(
+  tsize = c(20),
+  totalSamples = c(500),
+  interventionSize = c(2),
+  ndatasets = c(2,21),
+  k = c(1:20),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE,
+  alpha = 0.05,
+  use_dags = FALSE,
+  dag_nbh = 0
+)
+l1 <- explore(
+  df_params,
+  scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
+  sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
+  methods_all = list(c("gtruth","PearlAll"),c("gtruth","PearlObs"),c("gtruth","1")),
+  pw_methods_all = c("BIC"))
+
+
+
+ggplot(l1$df, aes(ndatasets,SHD,fill=factor(method))) + geom_boxplot()
+

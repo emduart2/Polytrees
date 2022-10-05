@@ -2,8 +2,10 @@ library(foreach)
 library(utils)
 library(pcalg)
 library(igraph)
+library(doParallel)
 
 #TODO add proper documentation!
+# - when using GIES, we need ensureDiff=TRUE 
 
 #---- setup parallel clusters (optional) ----
 # to execute in parallel, uncomment corresponding code blocks and change
@@ -37,7 +39,7 @@ estimate_skeleton <- function(Rs, Ns, method="mean"){
 
 # function to estimate orientations 
 estimate_orientations <- function(
-    p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,procedure="1",pw_method="BIC"){
+    p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,procedure="3",pw_method="BIC"){
   
   # procedure 1 simple
   if(procedure == "1simp"){
@@ -94,6 +96,8 @@ estimate_orientations <- function(
     return(i_cpdag_graph)
   }
   
+   if(procedure)
+  
   stop("Invalid procedure name.")
 }
 
@@ -124,7 +128,7 @@ explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
     .packages = c("mpoly"),
     .combine = 'rbind',
     .verbose=TRUE
-  ) %do% {
+  ) %dopar% {
     # parse parameters
     if(length(sd) == 1 && sd == -1) {
       sd <- c()
@@ -217,7 +221,7 @@ explore <- function(
     .verbose=TRUE,
     .errorhandling = "stop",
     .packages = c("mpoly")
-  ) %do% {
+  ) %dopar% {
     # parse parameters
     if(length(sd) == 1 && sd == -1) {
       sd <- c()
@@ -289,10 +293,30 @@ explore <- function(
           }
           
           # estimate orientations
-          est = tryCatch({
-            estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
-                                  procedure=m[2],pw_method=pw)},
-            error = function(e){NULL})
+          if(m[2] == "PearlObs"){
+            
+            # algo from Pearl with only observational dataset
+            lC_Pearl = Imatrix(C_list[1],Nlist[1])
+            est = estimate_orientations(p,Covlist[1],Ilist[1],Nlist[1],E,lC_Pearl,thres,alpha,Xlist[1],
+                                    procedure="1",pw_method="BIC")
+            
+          } else if(m[2] == "PearlAll"){
+            
+            # algo from Pearl pretending all datasets are interventional
+            Xall = Reduce(rbind, ID$Xs,c())
+            CovAll = sample.cov(Xall)
+            Covlist_Pearl = list(); Covlist_Pearl[[1]] = CovAll * totalSmpl
+            Rall = list(); Rall[[1]] = cov2cor(CovAll)
+            lC_Pearl = Imatrix(Rall,c(totalSmpl))
+            x = list(); x[[1]] = Xall;
+            
+            est = estimate_orientations(p,Covlist_Pearl,list(c(totalSmpl)),c(totalSmpl),E,lC_Pearl,thres,alpha,x,
+                                    procedure="1",pw_method="BIC")
+            
+          } else {
+            est = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
+                                    procedure=m[2],pw_method=pw)
+          }
           t = as.numeric(Sys.time() - s) * 1000
         }
         
@@ -369,8 +393,8 @@ prepare_df_plot <- function(df){
   if(length(unique(df$kindOfIntervention))==1){
     str = append(str,paste(", intervention: ", unique(df$kindOfIntervention)))
   }
-  if(length(unique(df$conservative))==1){
-    str = append(str,paste(", conservative: ", unique(df$conservative)))
+  if(length(unique(df$use_dags))==TRUE){
+    str = append(str,paste(", dags with nbh ", unique(df$dag_nbh)))
   }
   str <- paste(str,collapse="")
   str <- substr(str,3,1000000L)
