@@ -71,7 +71,7 @@ E_e<-get.edgelist(CL)
 thres<-3*log(sum(Nlist))
 # e_s_dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple")
 # e_s_dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E_e,lC,thres,method="simple")
-e_s_dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple")
+e_s_dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple",pw_method = "BIC")
 
 e_s_dag_adj<-cpdag_from_lists(e_s_dag_list$oriented,e_s_dag_list$unotiented,p)
 colnames(e_s_dag_adj)<-colnames(Xlist[[1]])
