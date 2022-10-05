@@ -260,7 +260,7 @@ saveRDS(l, file = paste(save_dir,"l012.Rds",sep=''))
 # with nbh = 1
 df_params <- expand.grid(
   tsize = c(1000),
-  totalSamples = c(200,500),
+  totalSamples = c(200,500,1000),
   interventionSize = c(1),
   ndatasets = c(21),
   k = c(1:kmax),
@@ -281,9 +281,9 @@ l013 <- explore(
 # with nbh = 3
 df_params <- expand.grid(
   tsize = c(1000),
-  totalSamples = c(200,500),
+  totalSamples = c(500),
   interventionSize = c(1),
-  ndatasets = c(11,51,101),
+  ndatasets = c(11,31),
   k = c(1:kmax),
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
