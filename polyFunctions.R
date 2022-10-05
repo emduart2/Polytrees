@@ -1125,6 +1125,20 @@ dropFirst<-function(x){
   x<-x[-1]
   return(x)
 }
+
+# ---- Modifying regCoeff
+regCoeff<-function(x,y){
+  x<-as.numeric(x)
+  y<-as.numeric(y)
+  xbar<-mean(x)
+  ybar<-mean(y)
+  sxx<-sum((x-xbar)^2)
+  syy<-sum((y-ybar)^2)
+  sxy<-sum((x-xbar)*(y-ybar))
+  b<-(1/sxx)*sxy
+  a<-ybar-b*xbar
+  return(c(a,b))
+}
 #----------
 
 #---- F_test -- Based on Chow 1960- Test of regression coefficients with modified dfs
