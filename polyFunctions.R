@@ -1158,8 +1158,8 @@ F_test<-function(Xobsv,Xint){
   x1<-Xobsv[,1]
   y2<-Xint[,2]
   x2<-Xint[,1]
-  x<-rbind(x1,x2)
-  y<-rbind(y1,y2)
+  x<-append(x1,x2)
+  y<-append(y1,y2)
   n1<-nrow(Xobsv)
   n2<-nrow(Xint)
   cx<-regCoeff(x,y)
