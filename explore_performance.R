@@ -293,10 +293,32 @@ explore <- function(
           }
           
           # estimate orientations
-          est = tryCatch({
-            estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
-                                  procedure=m[2],pw_method=pw)},
-            error = function(e){NULL})
+          if(m[2] == "PearlObs"){
+            
+            # algo from Pearl with only observational dataset
+            lC_Pearl = Imatrix(C_list[1],Nlist[1])
+            est = estimate_orientations(p,Covlist[1],Ilist[1],Nlist[1],E,lC_Pearl,thres,alpha,Xlist[1],
+                                    procedure="1",pw_method="BIC")
+            
+          } else if(m[2] == "PearlAll"){
+            
+            # algo from Pearl pretending all datasets are interventional
+            Xall = Reduce(rbind, ID$Xs,c())
+            CovAll = sample.cov(Xall)
+            Covlist_Pearl = list(); Covlist_Pearl[[1]] = CovAll * totalSmpl
+            Rall = list(); Rall[[1]] = cov2cor(CovAll)
+            lC_Pearl = Imatrix(Rall,c(totalSmpl))
+            x = list(); x[[1]] = Xall;
+            
+            est = estimate_orientations(p,Covlist_Pearl,list(c(totalSmpl)),c(totalSmpl),E,lC_Pearl,thres,alpha,x,
+                                    procedure="1",pw_method="BIC")
+            
+          } else {
+            est = tryCatch({
+              estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
+                                    procedure=m[2],pw_method=pw)},
+              error = function(e){NULL})
+          }
           t = as.numeric(Sys.time() - s) * 1000
         }
         
