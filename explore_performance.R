@@ -221,7 +221,7 @@ explore <- function(
     .verbose=TRUE,
     .errorhandling = "stop",
     .packages = c("mpoly")
-  ) %do% {
+  ) %dopar% {
     # parse parameters
     if(length(sd) == 1 && sd == -1) {
       sd <- c()
@@ -314,10 +314,8 @@ explore <- function(
                                     procedure="1",pw_method="BIC")
             
           } else {
-            est = tryCatch({
-              estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
-                                    procedure=m[2],pw_method=pw)},
-              error = function(e){NULL})
+            est = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
+                                    procedure=m[2],pw_method=pw)
           }
           t = as.numeric(Sys.time() - s) * 1000
         }
