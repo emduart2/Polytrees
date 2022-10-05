@@ -66,7 +66,7 @@ p = 1000
 # left
 df_params <- expand.grid(
   tsize = c(p),
-  totalSamples = c(100,200,500,1000),
+  totalSamples = c(200,500,1000),
   interventionSize = c(1),
   ndatasets = c(21),
   k = c(1:kmax),
@@ -82,7 +82,7 @@ saveRDS(l, file = paste(save_dir,"l004.Rds",sep=''))
 # middle
 df_params <- expand.grid(
   tsize = c(p),
-  totalSamples = c(100,200,500,1000),
+  totalSamples = c(200,500,1000),
   interventionSize = c(1),
   ndatasets = c(11,21,31),
   k = c(1:kmax),
@@ -98,7 +98,7 @@ saveRDS(l, file = paste(save_dir,"l005.Rds",sep=''))
 # right
 df_params <- expand.grid(
   tsize = c(p),
-  totalSamples = c(100,200,500,1000),
+  totalSamples = c(200,500,1000),
   interventionSize = c(1,5,10),
   ndatasets = c(21),
   k = c(1:kmax),
@@ -119,7 +119,7 @@ saveRDS(l, file = paste(save_dir,"l006.Rds",sep=''))
 # left
 df_params <- expand.grid(
   tsize = c(1000),
-  totalSamples = c(100,200,500),
+  totalSamples = c(200,500,1000),
   interventionSize = c(2),
   ndatasets = c(11,21,31),
   k = c(1:kmax),
@@ -141,7 +141,7 @@ saveRDS(l, file = paste(save_dir,"l007.Rds",sep=''))
 # right
 df_params <- expand.grid(
   tsize = c(1000),
-  totalSamples = c(100,200,500),
+  totalSamples = c(200,500,1000),
   interventionSize = c(2),
   ndatasets = c(21),
   k = c(1:kmax),
@@ -211,7 +211,7 @@ saveRDS(l, file = paste(save_dir,"l010.Rds",sep=''))
 #---- potential fig 3: compare GIES to our algo in high-dim for varying nsamples ----
 df_params <- expand.grid(
   tsize = c(1000),
-  totalSamples = c(100,200,500,1000),
+  totalSamples = c(200,500,1000),
   interventionSize = c(1),
   ndatasets = c(21),
   k = c(1:kmax),
@@ -235,7 +235,7 @@ saveRDS(l, file = paste(save_dir,"l011.Rds",sep=''))
 # pick one samplesize
 df_params <- expand.grid(
   tsize = c(1000),
-  totalSamples = c(100,200,500),
+  totalSamples = c(200,500,1000),
   interventionSize = c(1),
   ndatasets = c(11,21,31),
   k = c(1:kmax),
@@ -257,46 +257,46 @@ saveRDS(l, file = paste(save_dir,"l012.Rds",sep=''))
 
 
 # #---- potential fig 3: high-dim DAG setting for varying nsamples ----
-# # with nbh = ?
-# df_params <- expand.grid(
-#   tsize = c(1000),
-#   totalSamples = c(100,200,500),
-#   interventionSize = c(1),
-#   ndatasets = c(21),
-#   k = c(1:kmax),
-#   sdatasets = list(c()),
-#   kindOfIntervention = c("perfect"),
-#   ensureDiff = TRUE,
-#   alpha = 0.05,
-#   use_dags = TRUE,
-#   dag_nbh = 10
-# )
-# l013 <- explore(
-#   df_params,
-#   scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
-#   sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
-#   methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3")),
-#   pw_methods_all = c("BIC"))
-# 
-# # with nbh = ?
-# df_params <- expand.grid(
-#   tsize = c(1000),
-#   totalSamples = c(100,200,500),
-#   interventionSize = c(1),
-#   ndatasets = c(11,51,101),
-#   k = c(1:kmax),
-#   sdatasets = list(c()),
-#   kindOfIntervention = c("perfect"),
-#   ensureDiff = TRUE,
-#   alpha = 0.05,
-#   use_dags = TRUE,
-#   dag_nbh = 10
-# )
-# l014 <- explore(
-#   df_params,
-#   scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
-#   sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
-#   methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3")),
-#   pw_methods_all = c("BIC"))
+# with nbh = 1
+df_params <- expand.grid(
+  tsize = c(1000),
+  totalSamples = c(200,500),
+  interventionSize = c(1),
+  ndatasets = c(21),
+  k = c(1:kmax),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE,
+  alpha = 0.05,
+  use_dags = TRUE,
+  dag_nbh = 1
+)
+l013 <- explore(
+  df_params,
+  scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives),
+  sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
+  methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3")),
+  pw_methods_all = c("BIC"))
+
+# with nbh = 3
+df_params <- expand.grid(
+  tsize = c(1000),
+  totalSamples = c(200,500),
+  interventionSize = c(1),
+  ndatasets = c(11,51,101),
+  k = c(1:kmax),
+  sdatasets = list(c()),
+  kindOfIntervention = c("perfect"),
+  ensureDiff = TRUE,
+  alpha = 0.05,
+  use_dags = TRUE,
+  dag_nbh = 3
+)
+l014 <- explore(
+  df_params,
+  scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives),
+  sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
+  methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3")),
+  pw_methods_all = c("BIC"))
 
 
