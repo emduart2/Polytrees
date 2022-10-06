@@ -393,7 +393,7 @@ prepare_df_plot <- function(df){
   if(length(unique(df$kindOfIntervention))==1){
     str = append(str,paste(", intervention: ", unique(df$kindOfIntervention)))
   }
-  if(length(unique(df$use_dags))==TRUE){
+  if((unique(df$use_dags))==TRUE){
     str = append(str,paste(", dags with nbh ", unique(df$dag_nbh)))
   }
   str <- paste(str,collapse="")

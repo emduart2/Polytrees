@@ -1,6 +1,3 @@
-# install packages and load packages
-source("setup.R")
-
 # notes: 
 # - skeletonExploration now includes baseline plots (hence replot fig1)
 # - high-dim: 1000 nodes, 21 datasets (2%), interventionsize 1
