@@ -106,10 +106,12 @@ coeffLambda<-function(G){
   edg<-as_edgelist(G) # This is the list of directed edges
   lambdaCoeff<-ruunif(nrow(edg),0.3,1) #this is a random vector of coefficients
   # Upper triangular matrix with Lambda coefficients
-  for(j in (1:nrow(edg))){
-    r<-edg[j,1]
-    c<-edg[j,2]
-    Lambda[r,c]<- lambdaCoeff[j]
+  if(nrow(edg) > 0){
+    for(j in (1:nrow(edg))){
+      r<-edg[j,1]
+      c<-edg[j,2]
+      Lambda[r,c]<- lambdaCoeff[j]
+    }
   }
   return(Lambda)
 }

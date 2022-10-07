@@ -218,7 +218,7 @@ explore <- function(
     use_dags = df_params$use_dags,
     dag_nbh = df_params$dag_nbh,
     .combine = 'rbind',
-    .verbose=TRUE,
+    # .verbose=TRUE,
     .errorhandling = "stop",
     .packages = c("mpoly")
   ) %dopar% {
@@ -314,10 +314,15 @@ explore <- function(
                                     procedure="1",pw_method="BIC")
             
           } else {
-            est = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
-                                    procedure=m[2],pw_method=pw)
+            # est = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
+            #                         procedure=m[2],pw_method=pw)
+            est = tryCatch({
+              estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
+                                    procedure=m[2],pw_method=pw)},
+              error = function(e){NULL})
           }
           t = as.numeric(Sys.time() - s) * 1000
+          print("estimate orientations done")
         }
         
         
