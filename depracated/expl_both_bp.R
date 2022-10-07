@@ -227,7 +227,7 @@ df_params <- expand.grid(
   totalSamples = c(500),
   interventionSize = c(2),
   ndatasets = c(2,11,21),
-  k = c(1:1),
+  k = c(1:20),
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
   ensureDiff = TRUE,
@@ -239,7 +239,7 @@ l1 <- explore(
   df_params,
   scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
   sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
-  methods_all = list(c("gtruth","2"),c("gtruth","2simp"),c("gtruth","3"),c("gtruth","3simp")),
+  methods_all = list(c("gtruth","1"),c("gtruth","1simp"),c("gtruth","2"),c("gtruth","2simp"),c("gtruth","3"),c("gtruth","3simp")),
   pw_methods_all = c("BIC","TEST"))
 
 
@@ -261,34 +261,13 @@ l2 <- explore(
   df_params,
   scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
   sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
-  methods_all = list(c("mean","1"),c("mean","1simp"),c("mean","2"),c("mean","2simp"),c("mean","3"),c("mean","3simp")),
+  methods_all = list(c("gtruth","1"),c("gtruth","1simp"),c("gtruth","2"),c("gtruth","2simp"),c("gtruth","3"),c("gtruth","3simp")),
   pw_methods_all = c("BIC","TEST"))
 
 
 
 
 # plot figures
-df_params <- expand.grid(
-  tsize = c(20),
-  totalSamples = c(500),
-  interventionSize = c(2),
-  ndatasets = c(2,21),
-  k = c(1:20),
-  sdatasets = list(c()),
-  kindOfIntervention = c("perfect"),
-  ensureDiff = TRUE,
-  alpha = 0.05,
-  use_dags = FALSE,
-  dag_nbh = 0
-)
-l1 <- explore(
-  df_params,
-  scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
-  sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
-  methods_all = list(c("gtruth","PearlAll"),c("gtruth","PearlObs"),c("gtruth","1")),
-  pw_methods_all = c("BIC"))
-
-
-
-ggplot(l1$df, aes(ndatasets,SHD,fill=factor(method))) + geom_boxplot()
+ggplot(l2$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot()+
+  labs(title=l2$str)
 
