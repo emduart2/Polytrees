@@ -1,12 +1,11 @@
 library(readxl)
-#Download Data
+# Load Data
 sachs_dir = "/home/lenny/Documents/Mathematische Statistik Lehrstuhl/sachs.som.datasets/"
 file.list <- list.files(sachs_dir, pattern='*.xls', recursive = TRUE)
 df.list <- lapply(paste(sachs_dir,file.list,sep=""), read_excel)
 
 
-
-#Data preparation: the experimental setting is taken from Wang, Solus, Yang, Uhler neurips 2017
+# Data preparation: the experimental setting is taken from Wang, Solus, Yang, Uhler neurips 2017
 Xlist<-list()
 Ilist<-list()
 Nlist<-c()
@@ -17,7 +16,6 @@ for(i in c(1:5)){
   Xlist[[i+1]]<-Xlist[[i+1]]-mean(Xlist[[i+1]])
   Nlist[i+1]<-dim(df.list[[i+7]])[1]
 }
-
 Ilist <- list()
 Ilist[[1]]<-c(Nlist[1])     # baseline
 Ilist[[2]]<-c(Nlist[2],7)   # akt -> akt
@@ -28,7 +26,7 @@ Ilist[[6]]<-c(Nlist[6],5)   # ly -> PIP3?
 p<-11
 
 
-##Ground truth
+# Create ground truth
 edg<-list()
 edg[[1]]<-c("PKA")
 edg[[2]]<-c("praf","PKA")
@@ -52,44 +50,46 @@ trueG<-as(trueAD,"graphNEL")
 
 
 
-
-#DAG computation
-
+# define important variables
 Clist<-list()
 Covlist<-list()
 for(i in c(1:6)){
   Covlist[[i]]<-cov(Xlist[[i]])
   Clist[[i]]<-cov2cor(Covlist[[i]])
 }
-
 lC<-Imatrix(Clist,Nlist)
-meanC<-wmeanCorrels(Clist,Nlist)$Rmean
-
-CL<-chowLiu(meanC)
-E_e<-get.edgelist(CL)
-
 thres<-3*log(sum(Nlist))
-# e_s_dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple")
-# e_s_dag_list<-complete_triplet(p,Covlist,Ilist,Nlist,E_e,lC,thres,method="simple")
-e_s_dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E_e,p,method="simple",pw_method = "BIC")
-
-e_s_dag_adj<-cpdag_from_lists(e_s_dag_list$oriented,e_s_dag_list$unotiented,p)
-colnames(e_s_dag_adj)<-colnames(Xlist[[1]])
-G<-graph_from_adjacency_matrix(e_s_dag_adj)
-G<-as_graphnel(G)
-
-#Comparison
-shd(trueG,G)
-SID::structIntervDist(trueG,G)$sidUpperBound
-
-par(mfrow=c(1,2))
-plot(G)
-plot(trueG)
 
 
+# our estimations
+skel = estimate_skeleton(Clist,Nlist,method="mean")
+E <- get.edgelist(skel)
+est_p1BIC = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,0.05,Xlist,
+                                procedure="1simp",pw_method="BIC")
+est_p3BIC = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,0.05,Xlist,
+                                procedure="3simp",pw_method="BIC")
 
+# Rebane and Pearl only observational
+skel = estimate_skeleton(Clist[1],Nlist[1],method="mean")
+E <- get.edgelist(skel)
+lC_Pearl = Imatrix(Clist[1],Nlist[1])
+est_PearlObs = estimate_orientations(p,Covlist[1],Ilist[1],Nlist[1],E,lC_Pearl,thres,0.05,Xlist[1],
+                                procedure="1",pw_method="BIC")
 
-# estimate with GIES
+# Rebane and Pearl treat all data as observational
+totalSmpl = sum(Nlist)
+Xall = Reduce(rbind, Xlist,c())
+CovAll = sample.cov(Xall)
+Covlist_Pearl = list(); Covlist_Pearl[[1]] = CovAll * totalSmpl
+Clist_Pearl = list(); Clist_Pearl[[1]] = cov2cor(CovAll)
+lC_Pearl = Imatrix(Clist_Pearl,c(totalSmpl))
+x = list(); x[[1]] = Xall;
+skel = estimate_skeleton(Clist_Pearl,c(totalSamples),method="mean")
+E <- get.edgelist(skel)
+est_PearlAll = estimate_orientations(p,Covlist_Pearl,list(c(totalSmpl)),c(totalSmpl),E,lC_Pearl,thres,0.05,x,
+                            procedure="1",pw_method="BIC")
+
+# GIES
 totalSmpl = sum(Nlist)
 allSamples = matrix(0, totalSmpl, p)
 targetindex = array(0, totalSmpl)
@@ -106,23 +106,19 @@ setting_GIES = new("GaussL0penIntScore",
                    data=allSamples, 
                    targets=targets, 
                    target.index=targetindex)
-
-
-# GIES estimate
 gies.fit = gies(setting_GIES)
-gies_est = as(gies.fit$essgraph,"graphNEL")
-
-shd(trueG, gies_est)
-SID::structIntervDist(trueG,gies_est)$sidUpperBound
+est_gies = as(gies.fit$essgraph,"graphNEL")
 
 
-# check true and false positives
-adj_true = as(trueG,"matrix")
-adj_est = as(gies_est,"matrix")
-(fp = sum((adj_est==1) & (adj_true==0)))
-(tp = sum((adj_est==1) & (adj_true==1)))
 
-par(mfrow=c(1,2))
-plot(gies_est)
-plot(trueG)
-
+# compare all the results
+mat = matrix(c(
+  shd(trueG,est_p1BIC), SID(trueG,est_p1BIC),
+  shd(trueG,est_p3BIC), SID(trueG,est_p3BIC),
+  shd(trueG,est_gies), SID(trueG,est_gies),
+  shd(trueG,est_PearlObs), SID(trueG,est_PearlObs),
+  shd(trueG,est_PearlAll), SID(trueG,est_PearlAll)
+), ncol = 2, byrow=TRUE)
+rownames(mat) = c("p1,BIC","p3,BIC","GIES","Pearl obs","Pearl all")
+colnames(mat) = c("SHD","SID")
+mat
