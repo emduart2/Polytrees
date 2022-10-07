@@ -26,6 +26,7 @@ library(doParallel)
 # estimates the skeleton from interventional data.
 # Inputs: Rs=list of sampled correlation matrices, Ns=samplesizes,
 #   method=computation method.
+# Output: returns skeleton as igraph
 estimate_skeleton <- function(Rs, Ns, method="mean"){
   matr = switch(method,
                 mean = wmeanCorrels(Rs,Ns)$Rmean,
@@ -33,7 +34,7 @@ estimate_skeleton <- function(Rs, Ns, method="mean"){
                 ltest = Imatrix(Rs,Ns)
   )
   Cl = chowLiu(matr)
-  return(get.adjacency(Cl))
+  return(Cl)
 }
 
 
@@ -83,7 +84,6 @@ estimate_orientations <- function(
                              ,pw_method=pw_method,alpha,Xlist)
     dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
     i_cpdag_graph<-dag2essgraph(as_graphnel(graph_from_adjacency_matrix(dag_adj)),Ilist)
-    
     return(i_cpdag_graph)
   } 
   
@@ -95,8 +95,6 @@ estimate_orientations <- function(
     i_cpdag_graph<-dag2essgraph(as_graphnel(graph_from_adjacency_matrix(dag_adj)),Ilist)
     return(i_cpdag_graph)
   }
-  
-   if(procedure)
   
   stop("Invalid procedure name.")
 }
@@ -126,8 +124,8 @@ explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
     kindOfIntervention = df_params$kindOfIntervention,
     ensureDiff = df_params$ensureDiff,
     .packages = c("mpoly"),
-    .combine = 'rbind',
-    .verbose=TRUE
+    # .verbose=TRUE,
+    .combine = 'rbind'
   ) %dopar% {
     # parse parameters
     if(length(sd) == 1 && sd == -1) {
@@ -145,14 +143,14 @@ explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
     ID <- interventionalData(G,IS$L,IS$targetsI,kindOfIntervention=kindOfIntervention)
     
     # compute deviation from true skeleton for 3 diff aggregation functions
-    estimated_skeleton<-estimate_skeleton(ID$Rs,ID$Ns,method="ltest")
-    SHD_ltest_val<-scoreFct(estimated_skeleton, IS$gTrues)
+    est <-estimate_skeleton(ID$Rs,ID$Ns,method="ltest")
+    SHD_ltest_val<-scoreFct(as_adjacency_matrix(est), IS$gTrues)
     
-    estimated_skeleton<-estimate_skeleton(ID$Rs,ID$Ns, method="mean")
-    SHD_mean_val<-scoreFct(estimated_skeleton, IS$gTrues)
+    est <- estimate_skeleton(ID$Rs,ID$Ns, method="mean")
+    SHD_mean_val<-scoreFct(as_adjacency_matrix(est), IS$gTrues)
     
-    estimated_skeleton<-estimate_skeleton(ID$Rs,ID$Ns, method="median")
-    SHD_median_val<-scoreFct(estimated_skeleton, IS$gTrues)
+    est <- estimate_skeleton(ID$Rs,ID$Ns, method="median")
+    SHD_median_val<-scoreFct(as_adjacency_matrix(est), IS$gTrues)
     
     # baseline from chowLiu on only observational data
     maxNSample = as.integer(floor(totalSmpl/nds))
@@ -161,16 +159,14 @@ explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
     Cov = sample.cov(X)
     R = cov2cor(Cov)
     CL<-chowLiu(R)
-    estimated_skeleton<-get.adjacency(CL)
-    SHD_baseObs <-scoreFct(estimated_skeleton, IS$gTrues)
+    SHD_baseObs <-scoreFct(as_adjacency_matrix(CL), IS$gTrues)
     
     # baseline from chowLiu on all data treating interventional as observational data
     Xall = Reduce(rbind, ID$Xs,c())
     CovAll = sample.cov(Xall)
     Rall = cov2cor(CovAll)
     CL<-chowLiu(Rall)
-    estimated_skeleton<-get.adjacency(CL)
-    SHD_baseAll <-scoreFct(estimated_skeleton, IS$gTrues)
+    SHD_baseAll <-scoreFct(as_adjacency_matrix(CL), IS$gTrues)
     
     # return results as vector
     res <- c(SHD_ltest_val,SHD_mean_val,SHD_median_val,SHD_baseObs,SHD_baseAll)
@@ -250,7 +246,7 @@ explore <- function(
     lC<-Imatrix(C_list,ID$Ns)
     
     # computations
-    res = array(NaN, length(methods_all) * length(pw_methods_all) * (1+length(scoreFct_all)))
+    res = array(NaN, length(methods_all) * length(pw_methods_all) * (3+length(scoreFct_all)))
     i = 1
     for(m in methods_all){
       for(pw in pw_methods_all){
@@ -289,46 +285,29 @@ explore <- function(
             E <- get.edgelist(G)
           } else {
             skelEst = estimate_skeleton(ID$Rs,ID$Ns, method=m[1])
-            E <- get.edgelist(graph_from_adjacency_matrix(skelEst))
+            E <- get.edgelist(skelEst)
           }
           
           # estimate orientations
-          if(m[2] == "PearlObs"){
-            
-            # algo from Pearl with only observational dataset
-            lC_Pearl = Imatrix(C_list[1],Nlist[1])
-            est = estimate_orientations(p,Covlist[1],Ilist[1],Nlist[1],E,lC_Pearl,thres,alpha,Xlist[1],
-                                    procedure="1",pw_method="BIC")
-            
-          } else if(m[2] == "PearlAll"){
-            
-            # algo from Pearl pretending all datasets are interventional
-            Xall = Reduce(rbind, ID$Xs,c())
-            CovAll = sample.cov(Xall)
-            Covlist_Pearl = list(); Covlist_Pearl[[1]] = CovAll * totalSmpl
-            Rall = list(); Rall[[1]] = cov2cor(CovAll)
-            lC_Pearl = Imatrix(Rall,c(totalSmpl))
-            x = list(); x[[1]] = Xall;
-            
-            est = estimate_orientations(p,Covlist_Pearl,list(c(totalSmpl)),c(totalSmpl),E,lC_Pearl,thres,alpha,x,
-                                    procedure="1",pw_method="BIC")
-            
-          } else {
-            # est = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
-            #                         procedure=m[2],pw_method=pw)
-            est = tryCatch({
-              estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
-                                    procedure=m[2],pw_method=pw)},
-              error = function(e){NULL})
-          }
+          est = tryCatch({
+            estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
+                                  procedure=m[2],pw_method=pw)},
+            error = function(e){NULL})
+          # est = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
+          #                         procedure=m[2],pw_method=pw)
           t = as.numeric(Sys.time() - s) * 1000
-          print("estimate orientations done")
         }
         
         
         # score estimation and add to results
-        res[i] = t # add runtime to results
-        j = 1
+        res[i] = t  # add runtime to results
+        if(use_dags){ 
+          nedges = dim(as_edgelist(G))[1]
+          c = count_components(G,mode="weak")
+          res[i+1] = nedges - (p-1) + (c-1)   # add optimal SHD
+          res[i+2] = nedges                  # add number edges
+        }
+        j = 3
         for(sf in scoreFct_all){
           if( is.null(est)){
             out = NaN
@@ -346,28 +325,42 @@ explore <- function(
   
   # create nice result data frame
   dfs = vector("list", length(methods_all) * length(pw_methods_all))
+  dfs_counter = 1
   i = 1
   for(m in methods_all){
     for(pw in pw_methods_all){
-      dfs[[i]] <- df_params
-      dfs[[i]]$aggrFct <- m[1]
-      dfs[[i]]$proc <- m[2]
-      dfs[[i]]$pw_method <- pw
-      dfs[[i]]$method <- paste(m[1],m[2],pw,sep=',') # for easier grouping in plot
       
-      dfs[[i]]$time <- vals[,i]
+      # add methods used
+      df <- df_params
+      df$aggrFct <- m[1]
+      df$proc <- m[2]
+      df$pw_method <- pw
+      df$method <- paste(m[1],m[2],pw,sep=',') # for easier grouping in plot
+      
+      # add additional metrics
+      df$time <- vals[,i]
+      if(unique(df_params$use_dags)){
+        df$SHD_optimal = vals[,i+1]
+        df$nEdgesDAG = vals[,i+2]
+      }
+      
+      # add scores
       j = 1
       for(sf in scoreFct_all){
-        dfs[[i]][,sFctNames_all[[j]]] <- vals[,i+j]
+        df[,sFctNames_all[[j]]] <- vals[,i+2+j]
         j = j+1
       }
-      i = i + j
+      i = i + 2 + j
+      
+      # add to list
+      dfs[[dfs_counter]] = df
+      dfs_counter = dfs_counter + 1
     }
   }
-  df <- Reduce(rbind, dfs, data.frame())
+  dfAll <- Reduce(rbind, dfs, data.frame())
   
   # save results in one variable
-  l = prepare_df_plot(df)
+  l = prepare_df_plot(dfAll)
   return(l)
 }
 
