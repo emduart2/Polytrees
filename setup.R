@@ -22,7 +22,7 @@ doParallel::registerDoParallel(cl = my.cluster)
 # execute main file
 print("started main execution")
 s = Sys.time()
-source("largeScale_cluster.R")
+source("cluster_computation/03_mostImportantComp_debug.R")
 (time_elapsed = Sys.time() - s)
 print("finished main execution")
 

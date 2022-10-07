@@ -338,7 +338,7 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,
   if(use_dags) {
     
     # generate DAGs
-    gOrig = randDAG(p, dag_nbh)
+    gOrig = randDAG(p, dag_nbh, method="er")
     adj = as(gOrig, "matrix")
     g = NULL
     g$Directed = 1*(abs(adj) > 0)
