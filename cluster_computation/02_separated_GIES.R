@@ -65,7 +65,7 @@ saveRDS(l, file = paste(save_dir,experiment_id,"-06.Rds",sep=''))
 # left
 df_params <- expand.grid(
   tsize = c(1000),
-  totalSamples = c(200,500,1000),
+  totalSamples = c(500),
   interventionSize = c(2),
   ndatasets = c(11,21,31),
   k = c(1:kmax),
