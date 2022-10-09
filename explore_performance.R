@@ -274,7 +274,7 @@ explore <- function(
           # GIES estimate
           s = Sys.time()
           gies.fit = gies(setting_GIES)
-          t = as.numeric(Sys.time() - s) * 1000
+          t = as.numeric(Sys.time() - s, units="secs")
           est = as(gies.fit$essgraph,"graphNEL")
           
         } else {
@@ -295,7 +295,7 @@ explore <- function(
             error = function(e){NULL})
           # est = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
           #                         procedure=m[2],pw_method=pw)
-          t = as.numeric(Sys.time() - s) * 1000
+          t = as.numeric(Sys.time() - s, units="secs")
         }
         
         
