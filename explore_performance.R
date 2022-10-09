@@ -236,7 +236,7 @@ explore <- function(
     
     
     # computations
-    res = array(NaN, length(methods_all) * length(pw_methods_all) * (3+length(scoreFct_all)))
+    res = array(NaN, length(methods_all) * length(pw_methods_all) * (4+length(scoreFct_all)))
     i = 1
     for(m in methods_all){
       for(pw in pw_methods_all){
@@ -276,8 +276,8 @@ explore <- function(
           Ilist<-IS$targetsI
           Nlist<-ID$Ns      
           C_list<-ID$Rs
-          for(i in c(1:length(Covlist))){
-            Covlist[[i]]<-Covlist[[i]]*Nlist[i]
+          for(j in c(1:length(Covlist))){
+            Covlist[[j]]<-Covlist[[j]]*Nlist[j]
           }
           thres<-0.5*log(sum(Nlist))*length(Ilist)
           lC<-Imatrix(C_list,ID$Ns)
@@ -298,8 +298,7 @@ explore <- function(
           t = as.numeric(Sys.time() - s, units="secs") + ID$timeCovCor
         }
         
-        
-        # score estimation and add to results
+        # add additional information about the computation
         res[i] = t  # add runtime to results
         if(use_dags){ 
           nedges = dim(as_edgelist(G))[1]
@@ -307,8 +306,13 @@ explore <- function(
           res[i+1] = nedges - (p-1) + (c-1)   # add optimal SHD
           res[i+2] = nedges                  # add number edges
         }
+        g_rand = graph_from_adjacency_matrix(pruferwithskeletonOpt(p)$Directed)
+        icpdag_rand = dag2essgraph(as_graphnel(g_rand),Ilist)
         true_i_cpdag<-dag2essgraph(as_graphnel(G),Ilist)
-        j = 3
+        res[i+3] = shd(icpdag_rand, true_i_cpdag) # add shd of random polytree
+        
+        # score estimation and add to results
+        j = 4
         for(sf in scoreFct_all){
           if( is.null(est)){
             out = NaN
@@ -339,19 +343,20 @@ explore <- function(
       df$method <- paste(m[1],m[2],pw,sep=',') # for easier grouping in plot
       
       # add additional metrics
-      df$time <- vals[,i]
+      df$time_s <- vals[,i]
       if(unique(df_params$use_dags)){
         df$SHD_optimal = vals[,i+1]
         df$nEdgesDAG = vals[,i+2]
       }
+      df$shd_rand = vals[,i+3]
       
       # add scores
       j = 1
       for(sf in scoreFct_all){
-        df[,sFctNames_all[[j]]] <- vals[,i+2+j]
+        df[,sFctNames_all[[j]]] <- vals[,i+3+j]
         j = j+1
       }
-      i = i + 2 + j
+      i = i + 3 + j
       
       # add to list
       dfs[[dfs_counter]] = df
