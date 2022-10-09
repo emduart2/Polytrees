@@ -1,7 +1,7 @@
 # paramters
 kmax = 2
 save_dir = ''  # with final '/' in the end
-experiment_id = "04"
+experiment_id = "05"
 
 # -- parallellisation below here-- 
 
