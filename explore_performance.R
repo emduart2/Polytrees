@@ -233,17 +233,7 @@ explore <- function(
                    use_dags=use_dags, dag_nbh=dag_nbh)
     G<-graph_from_adjacency_matrix(IS$gTrued)
     ID<-interventionalData(G,IS$L,IS$targetsI)
-    Covlist<-ID$Covs
-    Xlist<-ID$Xs
-    Ilist<-IS$targetsI
-    Nlist<-ID$Ns      
-    C_list<-ID$Rs
-    for(i in c(1:length(Covlist))){
-      Covlist[[i]]<-Covlist[[i]]*Nlist[i]
-    }
-    true_i_cpdag<-dag2essgraph(as_graphnel(G),Ilist)
-    thres<-0.5*log(sum(Nlist))*length(Ilist)
-    lC<-Imatrix(C_list,ID$Ns)
+    
     
     # computations
     res = array(NaN, length(methods_all) * length(pw_methods_all) * (3+length(scoreFct_all)))
@@ -281,6 +271,16 @@ explore <- function(
           
           # estimate skeleton
           s = Sys.time()
+          Covlist<-ID$Covs
+          Xlist<-ID$Xs
+          Ilist<-IS$targetsI
+          Nlist<-ID$Ns      
+          C_list<-ID$Rs
+          for(i in c(1:length(Covlist))){
+            Covlist[[i]]<-Covlist[[i]]*Nlist[i]
+          }
+          thres<-0.5*log(sum(Nlist))*length(Ilist)
+          lC<-Imatrix(C_list,ID$Ns)
           if( m[1] == "gtruth") {
             E <- get.edgelist(G)
           } else {
@@ -295,7 +295,7 @@ explore <- function(
             error = function(e){NULL})
           # est = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,
           #                         procedure=m[2],pw_method=pw)
-          t = as.numeric(Sys.time() - s, units="secs")
+          t = as.numeric(Sys.time() - s, units="secs") + ID$timeCovCor
         }
         
         
@@ -307,6 +307,7 @@ explore <- function(
           res[i+1] = nedges - (p-1) + (c-1)   # add optimal SHD
           res[i+2] = nedges                  # add number edges
         }
+        true_i_cpdag<-dag2essgraph(as_graphnel(G),Ilist)
         j = 3
         for(sf in scoreFct_all){
           if( is.null(est)){

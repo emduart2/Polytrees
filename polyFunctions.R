@@ -181,6 +181,7 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
   Xlist<-list()
   nList<-c()
   edgesIntervened <- 0
+  timeCovCor = 0
   for(I in interventionTargets){
     nI<-I[1] # first element is the sample size
     edgIntI <- 0
@@ -218,8 +219,10 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
       }
     }
     XI<-samplingDAG(nI,LI,varvector)
+    s = Sys.time()
     CovI<-sample.cov(XI)
     RI<-cov2cor(CovI)
+    timeCovCor = timeCovCor + as.numeric(Sys.time() - s, units="secs")
     Covlist<-append(Covlist,list(CovI))
     Rlist<-append(Rlist,list(RI))
     Llist<-append(Llist,list(LI))
@@ -227,7 +230,7 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
     Xlist<-append(Xlist,list(XI))
     edgesIntervened <- edgesIntervened + nI * edgIntI
   }
-  RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList,Xs=Xlist,Covs=Covlist,edgesIntervened=edgesIntervened)
+  RLlist<-list(Rs=Rlist,Ls=Llist,Ns=nList,Xs=Xlist,Covs=Covlist,edgesIntervened=edgesIntervened,timeCovCor=timeCovCor)
   return(RLlist)
 }
 #Imatrix
