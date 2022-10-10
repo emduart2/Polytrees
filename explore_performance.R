@@ -241,7 +241,9 @@ explore <- function(
     for(m in methods_all){
       for(pw in pw_methods_all){
         
+        
         # estimate essential graph
+        Ilist<-IS$targetsI
         if(m[1] == "GIES") {
           
           # parse into GIES setting
@@ -260,7 +262,7 @@ explore <- function(
                              data=allSamples, 
                              targets=targets, 
                              target.index=targetindex)
-          
+        
           # GIES estimate
           s = Sys.time()
           gies.fit = gies(setting_GIES)
@@ -273,7 +275,6 @@ explore <- function(
           s = Sys.time()
           Covlist<-ID$Covs
           Xlist<-ID$Xs
-          Ilist<-IS$targetsI
           Nlist<-ID$Ns      
           C_list<-ID$Rs
           for(j in c(1:length(Covlist))){
