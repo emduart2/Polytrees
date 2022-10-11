@@ -112,13 +112,17 @@ est_gies = as(gies.fit$essgraph,"graphNEL")
 
 
 # compare all the results
-mat = matrix(c(
-  shd(trueG,est_p1BIC), SID(trueG,est_p1BIC),
-  shd(trueG,est_p3BIC), SID(trueG,est_p3BIC),
-  shd(trueG,est_gies), SID(trueG,est_gies),
-  shd(trueG,est_PearlObs), SID(trueG,est_PearlObs),
-  shd(trueG,est_PearlAll), SID(trueG,est_PearlAll)
-), ncol = 2, byrow=TRUE)
-rownames(mat) = c("p1,BIC","p3,BIC","GIES","Pearl obs","Pearl all")
-colnames(mat) = c("SHD","SID")
+scoreFcts = list(shd,SID, true_positives, false_positives)
+scoreFctNames = c("SHD","SID","TP","FP")
+estimates = list(est_p1BIC,est_p3BIC,est_gies,est_PearlObs,est_PearlAll)
+estimates_names = c("p1,BIC","p3,BIC","GIES","Pearl obs","Pearl all")
+
+mat = matrix(0, 5, length(scoreFcts))
+for(i in 1:5){
+  for(j in 1:length(scoreFcts)){
+    mat[i,j] = scoreFcts[[j]](trueG, estimates[[i]])
+  }
+}
+rownames(mat) = estimates_names
+colnames(mat) = scoreFctNames
 mat
