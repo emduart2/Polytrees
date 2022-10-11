@@ -1,5 +1,6 @@
-load_dir = "cluster_computation/03_results_with500/"
-experiment_id = "03"
+# load_dir = "cluster_computation/03_results_with500/"
+load_dir = "cluster_computation/Results_monday/"
+experiment_id = "04"
 library(ggpubr)
 
 #---- fig 2 but high-dim ----
@@ -10,23 +11,26 @@ library(ggpubr)
 # - check runtime of GIES 
 # - if it terminates, we want to say that we are faster
 
-
 l01 = readRDS(paste(load_dir, experiment_id,"-01.Rds",sep=""))
 l01_gies = readRDS(paste(load_dir, experiment_id,"-01_GIES.Rds",sep=""))
 l03 = readRDS(paste(load_dir, experiment_id,"-03.Rds",sep=""))
+l03_GIES = readRDS(paste(load_dir, "05-03_GIES.Rds",sep=""))
+ndsBIC = readRDS(paste(load_dir, "05-01.Rds",sep=""))
+nspBIC = readRDS(paste(load_dir, "05-03.Rds",sep=""))
 
-df01_all = rbind(l01$df, l01_gies$df)
+df01_all = rbind(l01$df, l01_gies$df, ndsBIC$df)
 df01_all = df01_all[df01_all$interventionSize == 10,]
-df03 = l03$df[l03$df$interventionSize == 10, ]
+df03_all = rbind(l03$df, dfGIES, nspBIC$df)
+df03_all = df03_all[df03_all$interventionSize == 10, ]
 
 (fig2_hd = ggplot(df01_all, aes(ndatasets, SHD, fill=factor(method))) + geom_boxplot() +
-  ggplot(df03, aes(totalSamples, SHD, fill=factor(method))) + geom_boxplot() +
+  ggplot(df03_all, aes(totalSamples, SHD, fill=factor(method))) + geom_boxplot() +
   plot_layout(nrow=1, guides="collect") + plot_annotation(title=l01$str))
 (fig2_hd = ggplot(df01_all, aes(ndatasets, SID, fill=factor(method))) + geom_boxplot() +
-    ggplot(df03, aes(totalSamples, SID, fill=factor(method))) + geom_boxplot() +
+    ggplot(df03_all, aes(totalSamples, SID, fill=factor(method))) + geom_boxplot() +
     plot_layout(nrow=1, guides="collect") + plot_annotation(title=l01$str))
-(fig2_hd = ggplot(df01_all, aes(ndatasets, time, fill=factor(method))) + geom_boxplot() +
-    ggplot(df03, aes(totalSamples, time, fill=factor(method))) + geom_boxplot() +
+(fig2_hd = ggplot(df01_all, aes(ndatasets, time_s, fill=factor(method))) + geom_boxplot() +
+    ggplot(df03_all, aes(totalSamples, time_s, fill=factor(method))) + geom_boxplot() +
     plot_layout(nrow=1, guides="collect") + plot_annotation(title=l01$str))
 
 
@@ -105,3 +109,5 @@ df_optSHD$SHD = df_optSHD$SHD_optimal
 
 f_shd +labs(title="")+ f_sid+labs(title="") + f_time+labs(title="") + plot_layout(nrow=1, guides="collect") +
   plot_annotation(title = paste(l06$str,", intervSize: ",intervSize))
+
+
