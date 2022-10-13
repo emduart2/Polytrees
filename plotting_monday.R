@@ -118,47 +118,4 @@ ggplot(df_plot, aes(totalSamples, df_plot[,y], fill=method)) + geom_boxplot() + 
 
 
 
-#---- potential figure 3 ----
-# f1: low-dimensional?
 
-
-
-# f2: high-dim polytree
-l01 = readRDS(paste(load_dir, "04-01.Rds",sep=""))
-l01_gies = readRDS(paste(load_dir, "04-01_GIES.Rds",sep=""))
-l03 = readRDS(paste(load_dir, "04-03.Rds",sep=""))
-l03_GIES = readRDS(paste(load_dir, "05-03_GIES.Rds",sep=""))
-ndsBIC = readRDS(paste(load_dir, "05-01.Rds",sep=""))
-nspBIC = readRDS(paste(load_dir, "05-03.Rds",sep=""))
-
-df01_all = rbind(l01$df, l01_gies$df, ndsBIC$df)
-df01_all = df01_all[df01_all$interventionSize == 10,]
-df01_all = rbind(df01_all, create_randDag(df01_all))
-df03_all = rbind(l03$df, l03_GIES$df, nspBIC$df)
-df03_all = df03_all[df03_all$interventionSize == 10, ]
-df03_all = rbind(df03_all, create_randDag(df03_all))
-
-f2 = ggplot(df03_all, aes(totalSamples, log(SHD), fill=factor(method))) + geom_boxplot() +
-  labs(title="high-dim Polytrees")
-
-
-# f3: high-dim dags
-l7 = readRDS(paste(load_dir,"05-07.Rds",sep=''))
-l7_GIES = readRDS(paste(load_dir,"05-07_GIES.Rds",sep=''))
-nbh5 = rbind(l7$df, l7_GIES$df)
-nbh5 = rbind(nbh5, create_dagOpt_dagRand(nbh5))
-nbh5plot = nbh5[nbh5$totalSamples != "3000", ]
-f3 = ggplot(nbh5plot, aes(totalSamples, (SHD), fill=factor(method))) + geom_boxplot() +
-  labs(title="high-dim DAGs")
-
-
-# f4 runtime of one of the two
-dfplot = nbh5[nbh5$method != "shd_opt",]
-dfplot = dfplot[dfplot$method != "shd_rand",]
-dfplot = dfplot[dfplot$totalSamples != "3000",]
-f4 = ggplot(dfplot, aes(totalSamples, log(time_s), fill=factor(method))) + geom_boxplot() +
-    labs(title="run-time h-d DAGs")
-
-
-# merge figures
-f2 + f3 + f4 + plot_layout(nrow = 1, guides="collect") 

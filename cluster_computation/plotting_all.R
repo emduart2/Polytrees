@@ -47,30 +47,30 @@ colors1 = c(reds[pattern], blues[pattern], greens[pattern])
 
 dict = function(x){return(switch(x,
    "gtruth,1,BIC" = "P.1, refined, BIC",
-   "gtruth,1,TEST" = "P.1, refined, TEST",
+   "gtruth,1,TEST" = "P.1, refined, IRC",
    "gtruth,1simp,BIC" = "P.1, simple, BIC",
-   "gtruth,1simp,TEST" = "P.1, simple, TEST",
+   "gtruth,1simp,TEST" = "P.1, simple, IRC",
    "gtruth,2,BIC" = "P.2, refined, BIC",
-   "gtruth,2,TEST" = "P.2, refined, TEST",
+   "gtruth,2,TEST" = "P.2, refined, IRC",
    "gtruth,2simp,BIC" = "P.2, simple, BIC",
-   "gtruth,2simp,TEST" = "P.2, simple, TEST",
+   "gtruth,2simp,TEST" = "P.2, simple, IRC",
    "gtruth,3,BIC" = "P.3, refined, BIC",
-   "gtruth,3,TEST" = "P.3, refined, TEST",
+   "gtruth,3,TEST" = "P.3, refined, IRC",
    "gtruth,3simp,BIC" = "P.3, simple, BIC",
-   "gtruth,3simp,TEST" = "P.3, simple, TEST",
+   "gtruth,3simp,TEST" = "P.3, simple, IRC",
    
    "mean,1,BIC" = "P.1, refined, BIC",
-   "mean,1,TEST" = "P.1, refined, TEST",
+   "mean,1,TEST" = "P.1, refined, IRC",
    "mean,1simp,BIC" = "P.1, simple, BIC",
-   "mean,1simp,TEST" = "P.1, simple, TEST",
+   "mean,1simp,TEST" = "P.1, simple, IRC",
    "mean,2,BIC" = "P.2, refined, BIC",
-   "mean,2,TEST" = "P.2, refined, TEST",
+   "mean,2,TEST" = "P.2, refined, IRC",
    "mean,2simp,BIC" = "P.2, simple, BIC",
-   "mean,2simp,TEST" = "P.2, simple, TEST",
+   "mean,2simp,TEST" = "P.2, simple, IRC",
    "mean,3,BIC" = "P.3, refined, BIC",
-   "mean,3,TEST" = "P.3, refined, TEST",
+   "mean,3,TEST" = "P.3, refined, IRC",
    "mean,3simp,BIC" = "P.3, simple, BIC",
-   "mean,3simp,TEST" = "P.3, simple, TEST",
+   "mean,3simp,TEST" = "P.3, simple, IRC",
    
    "GIES,GIES,TEST" = "GIES"
 ))}
@@ -89,15 +89,22 @@ ggplot(l1$df, aes(ndatasets, l1$df[, y], fill=factor(method))) + geom_boxplot()+
 legend_title = "Method"
 load_dir = 'cluster_computation/Results_monday/'
 # f1: low-dimensional?
-ll1 = readRDS("cluster_computation/03_results_with500/03-05.Rds")
-dfBIC = ll1$df[ll1$df$method %in% c("mean,1simp,BIC","mean,3simp,BIC"),]
-dfTEST = NULL
-dfGIES = NULL
-f1 = ggplot(rbind(dfBIC, dfTEST, dfGIES), aes(totalSamples, SHD, fill=method)) + 
+# f1 = ggplot(rbind(dfBIC, dfTESTGIES), aes(totalSamples, SHD, fill=method)) + 
+#   geom_boxplot() + labs(title = "low-dim Polytrees")
+
+ll_nds = rbind(
+  readRDS("local_computations/01-01.Rds")$df,
+  readRDS("local_computations/01-03.Rds")$df,
+  readRDS("local_computations/01-04.Rds")$df)
+ll_ss = rbind(
+  readRDS("local_computations/01-02.Rds")$df,
+  readRDS("local_computations/01-05.Rds")$df,
+  readRDS("local_computations/01-06.Rds")$df)
+f1 = ggplot(ll_ss, aes(totalSamples, SHD, fill=method)) + 
   geom_boxplot() + labs(title = "low-dim Polytrees")
+f1
 
-
-# f2: high-dim polytree
+# f2: high-dimpolytree
 # l01 = readRDS(paste(load_dir, "04-01.Rds",sep=""))
 # l01_gies = readRDS(paste(load_dir, "04-01_GIES.Rds",sep=""))
 l03 = readRDS(paste(load_dir, "04-03.Rds",sep=""))
@@ -157,4 +164,21 @@ f4
 # fig3_1 = f1 + f2 + f3 + f4 + plot_layout(nrow = 2, ncol=2, guides="collect") 
 (fig3_onlyHD = f2 + f3 + f4 + plot_layout(nrow = 1, guides="collect") ) 
 # size: 1250 450
+
+
+
+
+
+# ---- fig2 high-dimensional -----
+
+ll1 = readRDS("cluster_computation/03_results_with500/03-05.Rds")
+ll1 = readRDS("cluster_computation/04_results/04-05.Rds")
+dfBIC = ll1$df[ll1$df$method %in% c("mean,1simp,BIC","mean,3simp,BIC"),]
+dfTESTGIES = readRDS("local_computations/01-02.Rds")$df
+f1 = ggplot(rbind(dfBIC, dfTESTGIES), aes(totalSamples, SHD, fill=method)) +
+  geom_boxplot() + labs(title = "low-dim Polytrees")
+
+
+ndsBIC = readRDS("cluster_computation/03_results_with500/03-04.Rds")
+nssBIC = readRDS("cluster_computation/03_results_with500/03-05.Rds")
 

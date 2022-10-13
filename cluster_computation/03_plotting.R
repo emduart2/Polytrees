@@ -20,7 +20,11 @@ nspBIC = readRDS(paste(load_dir, "05-03.Rds",sep=""))
 
 df01_all = rbind(l01$df, l01_gies$df, ndsBIC$df)
 df01_all = df01_all[df01_all$interventionSize == 10,]
-df03_all = rbind(l03$df, dfGIES, nspBIC$df)
+tmp = nspBIC$df
+tmp$time = tmp$time_s
+tmp$time_s = NULL
+tmp$shd_rand = NULL
+df03_all = rbind(l03$df, l03_GIES$df, tmp)
 df03_all = df03_all[df03_all$interventionSize == 10, ]
 
 (fig2_hd = ggplot(df01_all, aes(ndatasets, SHD, fill=factor(method))) + geom_boxplot() +
