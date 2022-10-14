@@ -4,7 +4,6 @@
 library(RColorBrewer)
 library(patchwork)
 library(scales)
-library(latex2exp)
 library(ggplot2)
 
 data_folder = "data/"  # with final '/'
