@@ -20,7 +20,7 @@
 # install.packages("abind")
 # install.packages("SID")
 # install.packages("rmarkdown")
-#install.packages('spatstat')
+# install.packages('spatstat')
 # install.packages("poolr")
 # install.packages("harmonicmeanp")
 # install.packages("DescTools")
@@ -34,7 +34,7 @@ library(graphics)
 library(pcalg)
 library(abind)
 library(SID)
-library(tidyverse)  
+library(tidyverse)
 library(ggplot2)
 library(rmarkdown)
 library(spatstat)
@@ -46,6 +46,9 @@ library(graph)
 library(mpoly)
 library(sets)
 library(gap)
+library(igraph)
+library(sets)
+library(mpoly)
 #-------------------------
 
 # Function for calculating sample covariance matrix
@@ -62,23 +65,6 @@ sample.cov <- function(X, Y=NULL){ # Calculate sample covariance matrix
   }
 }
 
-# Function for calculating the sample correlation matrix
-# https://github.com/sqyu/CorDiffViz/tree/master/R
-sample.cor <- function(X, Y=NULL){ # Calculate sample correlation matrix
-  if (is.null(Y)){
-    covhat <- sample.cov(X,Y)
-    corhat <- covhat/sqrt(diag(covhat)); corhat <- t(corhat)/sqrt(diag(covhat))
-  } else {
-    n <- nrow(X)
-    if (nrow(Y) != n) stop("X and Y must have the same number of rows.")
-    Xr <- X - t(matrix(colMeans(X), ncol(X), n))
-    Yr <- Y - t(matrix(colMeans(Y), ncol(Y), n))
-    covhat <- t(Xr)%*%Yr/n
-    corhat <- t(covhat)/sqrt(colMeans(Yr^2))
-    corhat <- t(corhat)/sqrt(colMeans(Xr^2))
-  }
-  return(corhat)
-}
 #-----------------------------------------------------------
 # Sampling n values independently 
 # uniformly at random from two disjoint intervals (-maxx,-minn)U(minn,maxx)
@@ -950,55 +936,6 @@ first_dir_id_edge<-function(Ilist,E,not_orientable){
 ##Auxiliary Functions
 
 #Weight Matrix
-## 
-pruferwithskeleton <- function(k){
-  if(k>2){
-    P_orig <- ceiling(runif(k-2, min = 0, max = k))
-    P <- P_orig
-    V_orig <- 1:k
-    V <- V_orig
-    adj_matrix <- Matrix(matrix(numeric(k * k), ncol = k),sparse=TRUE)
-    adj_matrixs <-Matrix(matrix(numeric(k * k), ncol = k),sparse=TRUE) 
-    
-    for(i in 1:(k-2)){
-      complement <- setdiff(V, P)
-      v_0 <- min(complement)
-      V <- setdiff(V, v_0)
-      adj_matrixs[which(V_orig == v_0), which(V_orig == P_orig[i])] <- adj_matrixs[which(V_orig == P_orig[i]), which(V_orig == v_0)]<-1
-      
-      m<-rbinom(1,1,0.5)
-      if(m==0){
-        adj_matrix[which(V_orig == v_0), which(V_orig == P_orig[i])] <- 1
-      }
-      else{
-        adj_matrix[which(V_orig == P_orig[i]), which(V_orig == v_0)] <- 1
-      }
-      P <- P[2:length(P)]
-    }
-    adj_matrixs[which(V_orig == V[1]), which(V_orig == V[2])]<-adj_matrixs[which(V_orig == V[2]), which(V_orig == V[1])]<-1
-    m<-rbinom(1,1,0.5)
-    if(m==0){
-      adj_matrix[which(V_orig == V[1]), which(V_orig == V[2])] <- 1
-    }
-    else{
-      adj_matrix[which(V_orig == V[2]), which(V_orig == V[1])] <- 1
-    }
-  }
-  else{
-    adj_matrixs<-matrix(c(0,1,1,0),nrow=2,byrow=TRUE)
-    m<-rbinom(1,1,0.5)
-    if(m==0){
-      adj_matrix<-matrix(c(0,1,0,0),nrow=2,byrow=TRUE)
-    }
-    else{
-      adj_matrix<-matrix(c(0,0,1,0),nrow=2,byrow=TRUE)
-    }
-  }
-  ret<-list(Directed=adj_matrix,Skeleton=adj_matrixs)
-  return(ret)
-}
-
-# same as pruferwithskeleton, but with optimized built-in method
 pruferwithskeletonOpt <- function(k){
   undirected = sample_tree(k, directed=FALSE, method="prufer")
   directed = as.directed(undirected, mode="random")

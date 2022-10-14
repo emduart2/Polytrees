@@ -4,28 +4,16 @@ library(pcalg)
 library(igraph)
 library(doParallel)
 
-#TODO add proper documentation!
 # - when using GIES, we need ensureDiff=TRUE 
-
-#---- setup parallel clusters (optional) ----
-# to execute in parallel, uncomment corresponding code blocks and change
-#   "%do%" into "%dopar%"
-#   WARNING: parallel execution might run into problem on windows machines!
-# n.cores <- parallel::detectCores() - 1
-# my.cluster <- parallel::makeCluster(
-#   n.cores,
-#   type = "FORK"
-# )
-# doParallel::registerDoParallel(cl = my.cluster)
-
-# close parallel cluster
-# parallel::stopCluster(cl = my.cluster)
 
 
 #---- wrapper for estimating skeleton and orientations ----
 # estimates the skeleton from interventional data.
-# Inputs: Rs=list of sampled correlation matrices, Ns=samplesizes,
-#   method=computation method.
+# Inputs: 
+#   Rs: list of sampled correlation matrices, 
+#   Ns: numeric vector of samplesizes,
+#   method: String. Computation method. One of "mean","median","ltestl". 
+#       Default: "mean".
 # Output: returns skeleton as igraph
 estimate_skeleton <- function(Rs, Ns, method="mean"){
   matr = switch(method,
@@ -39,8 +27,32 @@ estimate_skeleton <- function(Rs, Ns, method="mean"){
 
 
 # function to estimate orientations 
+# Inputs:
+#   p:        Integer. Number of nodes
+#   Covlist:  List of covariance matrices.
+#   Ilist:    List of intervention targets. Each entry is numeric vector with 
+#             first elemnt being sample size, all other elemnts nodes on which 
+#             interventions were performed.
+#   E:        2-by-e matrix where e is the number of edges in the skeleton. 
+#             Each undirected edge should only be present once.
+#   lC:       Imatrix
+#   thres:    ?
+#   alpha:    significance level
+#   Xlist:    List of samples with same length as Ilist. Each entry is n-by-p where
+#             n is the number of samples
+#   procedure:String to denote which procedure to take. One of 
+#             "1","1simp","2","2simp","3","3simp". Default: "3simp"
+#   pw_method:String. Pairwise method to use. One of "BIC","IRC". Default: "IRC"
+#
+# Outpus:
+#   graphNEL: i_cpdag_graph with the estimated orientations
 estimate_orientations <- function(
-    p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,procedure="3",pw_method="BIC"){
+    p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,procedure="3simp",pw_method="BIC"){
+  
+  # parse pw_method
+  if(pw_method == "IRC"){
+    pw_method = "TEST"
+  }
   
   # procedure 1 simple
   if(procedure == "1simp"){
@@ -103,17 +115,32 @@ estimate_orientations <- function(
 
 
 #---- functions to explore performance on a large scale ----
+# function to simulate skeleton recovery
+# Inputs:
+#   df_params: data.frame. Containing following columns:
+#                 tsize: denoting number of nodes
+#                 totalSamples: number of samples
+#                 interventionSize: size of each intervention
+#                 ndatasets: number datasets. See documentation of isetting.
+#                 k: iteration index
+#                 sdatasets: see documentation of isetting.
+#                 kindOfIntervention: which kind of intervention to simulate.
+#                   See documentation of interventionalData
+#                 ensureDiff: see documentation of isetting.
+#             Each row is one setting to simulate skeleton recovery on.
+#   scoreFct: Function to evaluate the estimations. Takes two adjacency matrices
+#             and returns a numeric.
+# Outputs:
+#   df: data.frame where each row corresponds to a computation. The columns are
+#         self-explanatory and a superset of the columns of df_params. 
+#         Additional columns are the result of the scoreFunction and a column
+#         indicating the aggregation function used, where "baseObs" denotes 
+#         chowLiu on only the observational data and "baseAll" denotes chowLiu
+#         on all data treating observational as interventional.
+#   str String. Describes some properties of df_params
 explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
-  # setup parallel cluster
-  # n.cores <- parallel::detectCores() - 1
-  # my.cluster <- parallel::makeCluster(
-  #   n.cores, 
-  #   type = "FORK"
-  # )
-  # doParallel::registerDoParallel(cl = my.cluster)
   
   # main (parallel) computation loop
-  # (if parallel not wished, just change %dopar% into %do%)
   (vals <- foreach(
     p = df_params$tsize,
     totalSmpl = df_params$totalSamples,
@@ -191,7 +218,41 @@ explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
 }
 
 
-
+# function to simulate orientation recovery and the full algorithm.
+# Inputs:
+#   df_params: data.frame. Containing following columns:
+#                tsize: denoting number of nodes
+#                totalSamples: number of samples
+#                interventionSize: size of each intervention
+#                ndatasets: number datasets. See documentation of isetting.
+#                k: iteration index
+#                sdatasets: see documentation of isetting.
+#                kindOfIntervention: which kind of intervention to simulate.
+#                  See documentation of interventionalData
+#                ensureDiff: see documentation of isetting.
+#              Each row is one setting to simulate the algorithm on.
+#   scoreFct_all: list of functions that take two graphNELs, where the first one
+#             is the grountruth and second estimations and returns a numeric
+#             value to evaluate the estimation.
+#   sFctNames_all: string vector containing names of the scoreFcts to put into
+#             the resulting data frame.
+#   methods_all: list of numeric vectors with length 2 denoting the methods
+#             to explore. First string is method fo skeleton recovery or 
+#             "gtruth" for ground truth. Second string is for orientation 
+#             mrecovery, see documentation of estimate_orientations. Can also be
+#             c("GIES","GIES") to use Greedy interventional equivalence search
+#             from Hauser and Buehlmann 2012.
+#   pw_methods_all: string vector for denoting which pairwise recovery method
+#             to use. String can be one of "BIC", "IRC".
+# Outputs:
+#   df: data.frame where each row corresponds to a computation. The columns are
+#       self-explanatory and a superset of the columns of df_params. 
+#       Additional columns are 
+#         "shd_rand" denoting SHD of random polytree,
+#         "time_s" denoting the runtime of the method, 
+#         "method" denoting a  string that summarizes the choices for the recovery and
+#         "[scoreFct]" for each scoreFct denoting the result of that function.
+#   str String. Describes some properties of df_params
 explore <- function(
     df_params, 
     scoreFct_all = list(pcalg::shd, SID), 
@@ -199,8 +260,8 @@ explore <- function(
     methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3"),c("gtruth","3")),
     pw_methods_all = c("BIC")){
   
+  
   # main (parallel) computation loop
-  # (if parallel not wished, just change %dopar% into %do%)
   (vals <- foreach(
     p = df_params$tsize,
     totalSmpl = df_params$totalSamples,
@@ -310,7 +371,7 @@ explore <- function(
         g_rand = graph_from_adjacency_matrix(pruferwithskeletonOpt(p)$Directed)
         icpdag_rand = dag2essgraph(as_graphnel(g_rand),Ilist)
         true_i_cpdag<-dag2essgraph(as_graphnel(G),Ilist)
-        res[i+3] = shd(icpdag_rand, true_i_cpdag) # add shd of random polytree
+        res[i+3] = pcalg::shd(icpdag_rand, true_i_cpdag) # add shd of random polytree
         
         # score estimation and add to results
         j = 4
@@ -372,7 +433,7 @@ explore <- function(
 }
 
 
-# function to prepare the result data frame for plotting
+# internal function to prepare the result data frame for plotting
 prepare_df_plot <- function(df){
   # convert to factors/strings
   df$totalSamples <- factor(df$totalSamples, levels=sort(unique(df$totalSamples),decreasing = FALSE))
