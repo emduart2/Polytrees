@@ -1,9 +1,11 @@
-library(readxl)
+# This script contains the code to generate Table 2 of the paper.
+
+
 # Load Data
-sachs_dir = "/home/lenny/Documents/Mathematische Statistik Lehrstuhl/sachs.som.datasets/"
+library(readxl)
+sachs_dir = ""
 file.list <- list.files(sachs_dir, pattern='*.xls', recursive = TRUE)
 df.list <- lapply(paste(sachs_dir,file.list,sep=""), read_excel)
-
 
 # Data preparation: the experimental setting is taken from Wang, Solus, Yang, Uhler neurips 2017
 Xlist<-list()
@@ -65,9 +67,9 @@ thres<-3*log(sum(Nlist))
 skel = estimate_skeleton(Clist,Nlist,method="mean")
 E <- get.edgelist(skel)
 est_p1BIC = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,0.05,Xlist,
-                                procedure="1simp",pw_method="BIC")
+                                procedure="1simp",pw_method="TEST")
 est_p3BIC = estimate_orientations(p,Covlist,Ilist,Nlist,E,lC,thres,0.05,Xlist,
-                                procedure="3simp",pw_method="BIC")
+                                procedure="3simp",pw_method="TEST")
 
 # Rebane and Pearl only observational
 skel = estimate_skeleton(Clist[1],Nlist[1],method="mean")
@@ -111,18 +113,20 @@ est_gies = as(gies.fit$essgraph,"graphNEL")
 
 
 
-# compare all the results
-scoreFcts = list(shd,SID, true_positives, false_positives)
-scoreFctNames = c("SHD","SID","TP","FP")
-estimates = list(est_p1BIC,est_p3BIC,est_gies,est_PearlObs,est_PearlAll)
-estimates_names = c("p1,BIC","p3,BIC","GIES","Pearl obs","Pearl all")
-
-mat = matrix(0, 5, length(scoreFcts))
-for(i in 1:5){
+# table 2: compare results on the sachsdatasets
+scoreFcts = list(pcalg::shd,SID)
+scoreFctNames = c("SHD","SID")
+estimates = list(est_p1BIC,est_p3BIC,est_gies)
+estimates_names = c("p1,IRC","p2,IRC","GIES")
+mat = matrix(0, length(estimates), length(scoreFcts))
+for(i in 1:length(estimates)){
   for(j in 1:length(scoreFcts)){
-    mat[i,j] = scoreFcts[[j]](trueG, estimates[[i]])
+    mat[i,j] = scoreFcts[[j]](dag2essgraph(trueG,Ilist), estimates[[i]])
   }
 }
 rownames(mat) = estimates_names
 colnames(mat) = scoreFctNames
 mat
+
+
+

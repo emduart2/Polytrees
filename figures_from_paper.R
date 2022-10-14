@@ -2,6 +2,7 @@ library(RColorBrewer)
 library(patchwork)
 library(scales)
 library(latex2exp)
+librarhy(ggplot2)
 
 data_folder = "data/"  # with final '/'
 figure_width = 1000
@@ -39,7 +40,6 @@ compare_dfs = function(df1,df2){
 
 
 # colorcode of figures
-
 ind = c(3,4,7,8)
 reds = brewer.pal(n = 9, name = 'Reds')[c(3,4,7,8)]
 blues = brewer.pal(n = 9, name = 'Greens')[c(3,4,7,8)]
@@ -55,10 +55,10 @@ dict = function(x){return(switch(x,
    "gtruth,2,TEST" = "P.2, refined, IRC",
    "gtruth,2simp,BIC" = "P.2, simple, BIC",
    "gtruth,2simp,TEST" = "P.2, simple, IRC",
-   "gtruth,3,BIC" = "P.3, refined, BIC",
-   "gtruth,3,TEST" = "P.3, refined, IRC",
-   "gtruth,3simp,BIC" = "P.3, simple, BIC",
-   "gtruth,3simp,TEST" = "P.3, simple, IRC",
+   "gtruth,3,BIC" = "P.2, refined, BIC",
+   "gtruth,3,TEST" = "P.2, refined, IRC",
+   "gtruth,3simp,BIC" = "P.2, simple, BIC",
+   "gtruth,3simp,TEST" = "P.1, simple, IRC",
    
    "mean,1,BIC" = "P.1, refined, BIC",
    "mean,1,TEST" = "P.1, refined, IRC",
@@ -68,10 +68,10 @@ dict = function(x){return(switch(x,
    "mean,2,TEST" = "P.2, refined, IRC",
    "mean,2simp,BIC" = "P.2, simple, BIC",
    "mean,2simp,TEST" = "P.2, simple, IRC",
-   "mean,3,BIC" = "P.3, refined, BIC",
-   "mean,3,TEST" = "P.3, refined, IRC",
-   "mean,3simp,BIC" = "P.3, simple, BIC",
-   "mean,3simp,TEST" = "P.3, simple, IRC",
+   "mean,3,BIC" = "P.2, refined, BIC",
+   "mean,3,TEST" = "P.2, refined, IRC",
+   "mean,3simp,BIC" = "P.2, simple, BIC",
+   "mean,3simp,TEST" = "P.2, simple, IRC",
    
    "GIES,GIES,TEST" = "GIES"
 ))}
@@ -82,16 +82,16 @@ legend_str = "Method"
 
 # ---- figure 1 (high-dim skeleton recovery) ----
 hd_skel1 = readRDS(paste(data_folder, "02-03.Rds",sep=""))
-hd_skel1 = hd_skel1$df[hd_skel1$df$method %in% c("mean","median","ltest"), ]
+hd_skel1 = hd_skel1$df[hd_skel1$df$method %in% c("mean","median","ltest","baseObs"), ]
 f1 = ggplot(hd_skel1, aes(totalSamples, SHD, fill=factor(method))) + geom_boxplot() + 
   labs(fill="Aggr. fct.") + xlab("number of samples")
 hd_skel2 = readRDS(paste(data_folder, "02-04.Rds",sep=""))
-hd_skel2 = hd_skel2$df[hd_skel2$df$method %in% c("mean","median","ltest"), ]
-hd_skel2$ndatasets = factor(as.numeric(as.character(hd_skel2$ndatasets))-1)
+hd_skel2 = hd_skel2$df[hd_skel2$df$method %in% c("mean","median","ltest","baseObs"), ]
+# hd_skel2$ndatasets = factor(as.numeric(as.character(hd_skel2$ndatasets))-1)
 f2 = ggplot(hd_skel2, aes(ndatasets, SHD, fill=factor(method))) + geom_boxplot() + 
-  labs(fill="Aggr. fct.") + xlab("number of intervention targets")
+  labs(fill="Aggr. fct.") + xlab("number of interv. datasets")
 hd_skel3 = readRDS(paste(data_folder, "02-05.Rds",sep=""))
-hd_skel3 = hd_skel3$df[hd_skel3$df$method %in% c("mean","median","ltest"), ]
+hd_skel3 = hd_skel3$df[hd_skel3$df$method %in% c("mean","median","ltest","baseObs"), ]
 f3 = ggplot(hd_skel3, aes(interventionSize, SHD, fill=factor(method))) + geom_boxplot() + 
   labs(fill="Aggr. fct.") + xlab("size of interventions")
 fig1 = f1 + f2 + f3 + plot_layout(nrow = 1, guides="collect")
@@ -101,19 +101,25 @@ fig1
 
 # ----- figure 2 (high-dim orientation recovery) ----
 hd_ort_nds = rbind(
-  readRDS(paste(data_folder, "02-01.Rds",sep="")),
-  readRDS(paste(data_folder, "02-01_GIES.Rds",sep="")))
+  readRDS(paste(data_folder, "02-01.Rds",sep=""))$df)
 hd_ort_nss = rbind(
-  readRDS(paste(data_folder, "02-02.Rds",sep="")),
-  readRDS(paste(data_folder, "02-02_GIES.Rds",sep="")))
-hd_ort_nds = sapply(hd_ort_nds, dict, USE.NAMES = FALSE)
-hd_ort_nss = sapply(hd_ort_nss, dict, USE.NAMES = FALSE)
-y = "SHD"
+  readRDS(paste(data_folder, "02-02.Rds",sep=""))$df)
+hd_ort_nds$method = sapply(hd_ort_nds$method, dict, USE.NAMES = FALSE)
+hd_ort_nss$method = sapply(hd_ort_nss$method, dict, USE.NAMES = FALSE)
+
+hd_ort_nds = hd_ort_nds[(hd_ort_nds$proc %in% c("1","1simp","3","3simp")),]
+hd_ort_nss = hd_ort_nss[(hd_ort_nss$proc %in% c("1","1simp","3","3simp")),]
+
+y = "time_s"
 ggplot(hd_ort_nds, aes(ndatasets, hd_ort_nds[, y], fill=factor(method))) + geom_boxplot()+
-  ylab(y) + scale_fill_manual(values=colors1) + labs(fill=legend_str)+
+  ylab(y) + scale_fill_manual(values=colors1) + labs(fill=legend_str)+ 
+  xlab("number of interv. datasets")+ 
+  # coord_trans(y="log10") +
   ggplot(hd_ort_nss, aes(totalSamples, hd_ort_nss[,y], fill=factor(method))) + geom_boxplot()+
-  ylab(y) + scale_fill_manual(values=colors1) + labs(fill=legend_str)+
-  plot_layout(ncol = 1, guides="collect") 
+  ylab(y) + scale_fill_manual(values=colors1) + labs(fill=legend_str)+ 
+  xlab("number of samples") + 
+  # coord_trans(y="log10") +
+  plot_layout(ncol = 1, guides="collect")
 
 
 
@@ -130,7 +136,7 @@ dfplotPT = readRDS(paste(data_folder, "lowdim_polytrees.Rds",sep=""))$df
 rand_shd_mean_ldpt = mean(dfplotPT[dfplotPT$method == dfplotPT$method[1], "shd_rand"])
 dfplotPT$method = sapply(dfplotPT$method, dict, USE.NAMES = FALSE)
 f_ld_PT = ggplot(dfplotPT, aes(totalSamples, SHD, fill=factor(method))) +
-  geom_boxplot() + labs(fill=legend_str, title = "Low-dim. Polytrees")+ xlab(ts_str)+
+  geom_boxplot() + labs(fill=legend_str, title = "Low-dim. Polytrees")+ xlab(NULL)+
   geom_hline(yintercept = rand_shd_mean_ldpt, linetype="dotted") +
   theme(plot.title = element_text(face="bold"))
 f_ld_PT
@@ -141,9 +147,9 @@ opt_shd_mean_lddags = mean(dfplotDAG[dfplotDAG$method == dfplotDAG$method[1], "S
 rand_shd_mean_lddags = mean(dfplotDAG[dfplotDAG$method == dfplotDAG$method[1], "shd_rand"])
 dfplotDAG$method = sapply(dfplotDAG$method, dict, USE.NAMES = FALSE)
 f_ld_dags = ggplot(dfplotDAG, aes(totalSamples, SHD, fill=factor(method))) +
-  geom_boxplot() + labs(fill=legend_str, title = "Low-dim. DAGs") + xlab(ts_str)+
+  geom_boxplot() + labs(fill=legend_str, title = "Low-dim. DAGs") + xlab(NULL)+ylab(NULL)+
   geom_hline(yintercept = rand_shd_mean_lddags, linetype="dotted") +  
-  geom_hline(yintercept = opt_shd_mean_lddags, linetype="dashed") +
+  # geom_hline(yintercept = opt_shd_mean_lddags, linetype="dashed") +
   theme(plot.title = element_text(face="bold"))
   
 
@@ -165,15 +171,6 @@ f_hd_PT = ggplot(df03_all, aes(totalSamples, SHD, fill=factor(method))) + geom_b
   labs(title="High-dim. Polytrees",fill=legend_str) + 
   theme(plot.title = element_text(face="bold")) +
   coord_trans(y="log10")
-  
-  # coord_trans(y="log10")
-
-  # scale_y_continuous(trans = log10_trans(),
-  #                    breaks = trans_breaks("log10", function(x) 10^x),
-  #                    labels = trans_format("log10", math_format(10^.x)))
-# f2
-# 
-# + coord_trans(y="log2")
 
 
 
@@ -188,23 +185,23 @@ rand_shd_mean = mean(nbh5plot[nbh5plot$method == nbh5plot$method[1], "shd_rand"]
 nbh5plot$method = sapply(nbh5plot$method, dict, USE.NAMES = FALSE)
 f_hd_DAG = ggplot(nbh5plot, aes(totalSamples, SHD, fill=factor(method))) + geom_boxplot() +
   geom_hline(yintercept = rand_shd_mean, linetype="dotted") +  
-  geom_hline(yintercept = opt_shd_mean, linetype="dashed") + 
-  labs(title="High-dim. DAGs",fill=legend_str) + xlab(ts_str) +
-  theme(plot.title = element_text(face="bold")) +
-  coord_trans(y="log10")
+  # geom_hline(yintercept = opt_shd_mean, linetype="dashed") + 
+  labs(title="High-dim. DAGs",fill=legend_str) + xlab(ts_str) + ylab(NULL) +coord_trans(y="log10") +
+  theme(plot.title = element_text(face="bold"))
+  
 
 
 # assemble figure
 fig3 = f_ld_PT + f_ld_dags + f_hd_PT + f_hd_DAG + 
   plot_layout(nrow=2,ncol = 2, guides="collect")
 fig3
-# size: 900 by 
+# size: 900 by 450
 
 
 
 
 # ---- table 1 (runtime in high-dim DAG setting) ----
-df = nbh5
+df = nbh5plot
 methods = unique(df$method)
 ss = unique(df$totalSamples)
 tmp = array(0, length(methods) * length(ss))
@@ -224,10 +221,18 @@ mat
 
 
 # ---- orientation high-dimensional ??? -----
-ll1 = readRDS("cluster_computation/03_results_with500/03-05.Rds")
-ll1 = readRDS("cluster_computation/04_results/04-05.Rds")
-dfBIC = ll1$df[ll1$df$method %in% c("mean,1simp,BIC","mean,3simp,BIC"),]
-dfTESTGIES = readRDS("local_computations/01-02.Rds")$df
+# ll1 = readRDS("cluster_computation/03_results_with500/03-05.Rds")
+ll1 = readRDS("cluster_computation/04_results/04-05.Rds")$df
+df_ssBIC = ll1[ll1$kindOfIntervention == "perfect",]
+
+ll2 = readRDS("cluster_computation/04_results/04-06.Rds")$df
+
+tmp = readRDS("local_computations/01-02.Rds")$df # lowdimensional
+tmp$time = tmp$time_s
+tmp$time_s = NULL
+
+
+
 f1 = ggplot(rbind(dfBIC, dfTESTGIES), aes(totalSamples, SHD, fill=method)) +
   geom_boxplot() + labs(title = "low-dim Polytrees")
 
@@ -237,7 +242,7 @@ nssBIC = readRDS("cluster_computation/03_results_with500/03-05.Rds")
 
 
 
-
+nds vary: 1,2,3,3simp * TEST
 
 
 
@@ -300,3 +305,7 @@ f4
 # fig3_1 = f1 + f2 + f3 + f4 + plot_layout(nrow = 2, ncol=2, guides="collect") 
 (fig3_onlyHD = f2 + f3 + f4 + plot_layout(nrow = 1, guides="collect") ) 
 # size: 1250 450
+
+
+
+# high-dimensional polytrees from data from cluster computations

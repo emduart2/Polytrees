@@ -1,9 +1,9 @@
 save_dir = ""
-p = 500
-nsamples_solo = 500
-nsamples_range = c(200,500,1000)
-nds_solo = 21
-nds_range = c(2,11,21)
+p = 3
+nsamples_solo = 11
+nsamples_range = c(11,12)
+nds_solo = 3
+nds_range = c(3,4)
 kmax = 10
 intervSize = 1
 start = Sys.time()
