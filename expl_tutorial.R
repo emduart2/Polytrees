@@ -4,6 +4,8 @@
 # The result is a list with a field data.frame that can be nicely plotted with 
 #   ggplot.
 source("setup.R")
+library(patchwork)
+library(ggplot2)
 
 # explore skeleton
 df_params <- expand.grid(
@@ -74,3 +76,4 @@ ggplot(l3$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot()+
   ggplot(l3$df, aes(totalSamples,SID,fill=factor(method))) + geom_boxplot()+
   ggplot(l3$df, aes(totalSamples,time_s,fill=factor(method))) + geom_boxplot()+
   plot_layout(nrow=1) + plot_annotation(title=l3$str)
+
