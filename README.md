@@ -9,7 +9,7 @@ For an overview of the functionality for further exploring the algorithms, start
 
 
 ### Parallelisation
-Parallelisation of the exploration functions can only be performed on unix systems! To enable parallelisation, execute
+Parallelisation of the exploration functions can currently only be performed on unix systems! To enable parallelisation, execute
 ```
 n.cores <- parallel::detectCores() - 1
 my.cluster <- parallel::makeCluster(
