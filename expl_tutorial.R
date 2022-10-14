@@ -3,7 +3,7 @@
 #   to the exploration function directly.
 # The result is a list with a field data.frame that can be nicely plotted with 
 #   ggplot.
-library(ggarrange)
+source("setup.R")
 
 # explore skeleton
 df_params <- expand.grid(
@@ -14,7 +14,9 @@ df_params <- expand.grid(
   k = c(1:20),
   sdatasets = list(c()),
   kindOfIntervention = c("perfect"),
-  ensureDiff = TRUE
+  ensureDiff = TRUE,
+  use_dags = FALSE,
+  dag_nbh = 0
 )
 l1 <- explore_skeleton(df_params)
 ggplot(l1$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot() +
@@ -38,20 +40,20 @@ df_params <- expand.grid(
 )
 l2 = explore(
   df_params,
-  scoreFct_all = list(pcalg::shd, SID), 
+  scoreFct_all = list(pcalg::shd,SID), 
   sFctNames_all = c("SHD","SID"),
-  methods_all = list(c("mean","1"),c("mean","3"),c("gtruth","3")),
-  pw_methods_all = c("BIC","TEST"))
+  methods_all = list(c("mean","1"),c("mean","3simp"),c("gtruth","3simp")),
+  pw_methods_all = c("BIC","IRC"))
 ggplot(l2$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot()+
   ggplot(l2$df, aes(totalSamples,SID,fill=factor(method))) + geom_boxplot()+
-  ggplot(l2$df, aes(totalSamples,time,fill=factor(method))) + geom_boxplot()+
+  ggplot(l2$df, aes(totalSamples,time_s,fill=factor(method))) + geom_boxplot()+
   plot_layout(nrow=1) + plot_annotation(title=l2$str)
 
 
 # explore both skeleton and exploration and compare with GIES
 df_params <- expand.grid(
   tsize = c(10),
-  totalSamples = c(50),
+  totalSamples = c(50,100),
   interventionSize = c(1),
   ndatasets = c(3),
   k = c(1:3),
@@ -66,9 +68,9 @@ l3 = explore(
   df_params,
   scoreFct_all = list(pcalg::shd, SID), 
   sFctNames_all = c("SHD","SID"),
-  methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3")),
-  pw_methods_all = c("BIC"))
+  methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3simp")),
+  pw_methods_all = c("IRC"))
 ggplot(l3$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot()+
   ggplot(l3$df, aes(totalSamples,SID,fill=factor(method))) + geom_boxplot()+
-  ggplot(l3$df, aes(totalSamples,time,fill=factor(method))) + geom_boxplot()+
+  ggplot(l3$df, aes(totalSamples,time_s,fill=factor(method))) + geom_boxplot()+
   plot_layout(nrow=1) + plot_annotation(title=l3$str)
