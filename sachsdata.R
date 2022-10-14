@@ -3,7 +3,7 @@
 
 # Load Data
 library(readxl)
-sachs_dir = ""
+sachs_dir = ""  # needs to point to a folder where the sachsdata is located in a format as described in the appendix of Sachs et al. 2005
 file.list <- list.files(sachs_dir, pattern='*.xls', recursive = TRUE)
 df.list <- lapply(paste(sachs_dir,file.list,sep=""), read_excel)
 

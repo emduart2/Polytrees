@@ -1,3 +1,6 @@
+# This file contains the code to generate the figures from the paper given
+# the data from the computation script in the data_folder.
+
 library(RColorBrewer)
 library(patchwork)
 library(scales)
@@ -69,7 +72,7 @@ fig1a
 legend_str = "Method"
 
 # low-dim polytree
-dfplotPT = readRDS(paste(data_folder, "lowdim_polytrees.Rds",sep=""))$df
+dfplotPT = readRDS(paste(data_folder, "1b_ld_pt.Rds",sep=""))$df
 rand_shd_mean_ldpt = mean(dfplotPT[dfplotPT$method == dfplotPT$method[1], "shd_rand"])
 dfplotPT$method = sapply(dfplotPT$method, dict, USE.NAMES = FALSE)
 f_ld_PT = ggplot(dfplotPT, aes(totalSamples, SHD, fill=factor(method))) +
@@ -78,7 +81,7 @@ f_ld_PT = ggplot(dfplotPT, aes(totalSamples, SHD, fill=factor(method))) +
   theme(plot.title = element_text(face="bold"))
 
 # low-dim DAGs
-dfplotDAG = readRDS(paste(data_folder, "lowdim_dags.Rds",sep=""))$df
+dfplotDAG = readRDS(paste(data_folder, "1b_ld_dags.Rds",sep=""))$df
 rand_shd_mean_lddags = mean(dfplotDAG[dfplotDAG$method == dfplotDAG$method[1], "shd_rand"])
 dfplotDAG$method = sapply(dfplotDAG$method, dict, USE.NAMES = FALSE)
 f_ld_dags = ggplot(dfplotDAG, aes(totalSamples, SHD, fill=factor(method))) +
@@ -87,8 +90,8 @@ f_ld_dags = ggplot(dfplotDAG, aes(totalSamples, SHD, fill=factor(method))) +
   theme(plot.title = element_text(face="bold"))
 
 # high-dim polytree
-l03 = readRDS(paste(data_folder, "04-03.Rds",sep=""))
-l03_GIES = readRDS(paste(data_folder, "05-03_GIES.Rds",sep=""))
+l03 = readRDS(paste(data_folder, "1b_hd_pt.Rds",sep=""))
+l03_GIES = readRDS(paste(data_folder, "1b_hd_pt_GIES.Rds",sep=""))
 df03_all = rbind(l03$df, l03_GIES$df)
 df03_all = df03_all[df03_all$interventionSize == 10, ]
 rand_shd_mean2 = mean(df03_all[df03_all$method == df03_all$method[1], "shd_rand"])
@@ -100,8 +103,8 @@ f_hd_PT = ggplot(df03_all, aes(totalSamples, SHD, fill=factor(method))) + geom_b
   coord_trans(y="log10")
 
 # high-dim dags
-l7 = readRDS(paste(data_folder,"05-07.Rds",sep=''))
-l7_GIES = readRDS(paste(data_folder,"05-07_GIES.Rds",sep=''))
+l7 = readRDS(paste(data_folder,"1b_hd_dags.Rds",sep=''))
+l7_GIES = readRDS(paste(data_folder,"1b_hd_dags_GIES.Rds",sep=''))
 nbh5 = rbind(l7$df, l7_GIES$df)
 nbh5plot = nbh5[nbh5$totalSamples != "3000", ]
 rand_shd_mean = mean(nbh5plot[nbh5plot$method == nbh5plot$method[1], "shd_rand"])

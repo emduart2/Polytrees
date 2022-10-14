@@ -44,3 +44,32 @@ l <- explore(
   methods_all = list(c("mean","1simp"),c("mean","3simp"),c("GIES","GIES")),
   pw_methods_all = c("TEST"))
 saveRDS(l, file = "data/lowdim_polytrees.Rds")
+
+
+
+
+
+
+# ---- orientation high-dimensional ??? -----
+# ll1 = readRDS("cluster_computation/03_results_with500/03-05.Rds")
+ll1 = readRDS("cluster_computation/04_results/04-05.Rds")$df
+df_ssBIC = ll1[ll1$kindOfIntervention == "perfect",]
+
+ll2 = readRDS("cluster_computation/04_results/04-06.Rds")$df
+
+tmp = readRDS("local_computations/01-02.Rds")$df # lowdimensional
+tmp$time = tmp$time_s
+tmp$time_s = NULL
+
+
+
+f1 = ggplot(rbind(dfBIC, dfTESTGIES), aes(totalSamples, SHD, fill=method)) +
+  geom_boxplot() + labs(title = "low-dim Polytrees")
+
+ndsBIC = readRDS("cluster_computation/03_results_with500/03-04.Rds")
+nssBIC = readRDS("cluster_computation/03_results_with500/03-05.Rds")
+
+
+
+
+nds vary: 1,2,3,3simp * TEST
