@@ -108,6 +108,18 @@ estimate_orientations <- function(
     return(i_cpdag_graph)
   }
   
+  # Random Orientation
+  if(procedure=="random"){
+    for(i in c(1:(p-1))){
+      if(rbinom(1,1,0.5)==0){
+        E[i,]<-rev(E[i,])
+      }
+    }
+    dag_adj<-cpdag_from_lists(E,c(),p)
+    i_cpdag_graph<-dag2essgraph(as_graphnel(graph_from_adjacency_matrix(dag_adj)),Ilist)
+    return(i_cpdag_graph)
+  }
+  
   stop("Invalid procedure name.")
 }
 
