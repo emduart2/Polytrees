@@ -36,7 +36,7 @@ estimate_skeleton <- function(Rs, Ns, method="mean"){
 #   E:        2-by-e matrix where e is the number of edges in the skeleton. 
 #             Each undirected edge should only be present once.
 #   lC:       Imatrix
-#   thres:    ?
+#   thres:    TODO
 #   alpha:    significance level
 #   Xlist:    List of samples with same length as Ilist. Each entry is n-by-p where
 #             n is the number of samples
@@ -49,7 +49,7 @@ estimate_skeleton <- function(Rs, Ns, method="mean"){
 estimate_orientations <- function(
     p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,procedure="3simp",pw_method="BIC"){
   
-  # parse pw_method
+  # parse pw_method for internal naming
   if(pw_method == "IRC"){
     pw_method = "TEST"
   }
@@ -305,7 +305,7 @@ explore <- function(
     IS <- isetting(p,nds,iss,sd,totalSmpl, ensureDiff = ensureDiff, 
                    use_dags=use_dags, dag_nbh=dag_nbh)
     G<-graph_from_adjacency_matrix(IS$gTrued)
-    ID<-interventionalData(G,IS$L,IS$targetsI)
+    ID<-interventionalData(G,IS$L,IS$targetsI, kindOfIntervention=kindOfIntervention)
     
     
     # computations
