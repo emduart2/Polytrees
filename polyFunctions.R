@@ -360,6 +360,7 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,
     sdatasets<-0*c(1:ndatasets)
     sdatasets[1]<-floor(s*totalsample)
     sdatasets[2:ndatasets]<-ceiling((totalsample-sdatasets[1])/(ndatasets-1))
+    sdatasets[1]<-sdatasets[1]-(sum(sdatasets)-totalsample)
   }
   if(length(interventionsize)==1){
     s<-interventionsize
