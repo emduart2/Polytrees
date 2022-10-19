@@ -182,13 +182,19 @@ explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
     ID <- interventionalData(G,IS$L,IS$targetsI,kindOfIntervention=kindOfIntervention)
     
     # compute deviation from true skeleton for 3 diff aggregation functions
+    s = Sys.time()
     est <-estimate_skeleton(ID$Rs,ID$Ns,method="ltest")
+    t_ltest = as.numeric(Sys.time() - s, units="secs")
     SHD_ltest_val<-scoreFct(as_adjacency_matrix(est), IS$gTrues)
     
+    s = Sys.time()
     est <- estimate_skeleton(ID$Rs,ID$Ns, method="mean")
+    t_mean = as.numeric(Sys.time() - s, units="secs")
     SHD_mean_val<-scoreFct(as_adjacency_matrix(est), IS$gTrues)
     
+    s = Sys.time()
     est <- estimate_skeleton(ID$Rs,ID$Ns, method="median")
+    t_median= as.numeric(Sys.time() - s, units="secs")
     SHD_median_val<-scoreFct(as_adjacency_matrix(est), IS$gTrues)
     
     # baseline from chowLiu on only observational data
@@ -208,7 +214,8 @@ explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
     SHD_baseAll <-scoreFct(as_adjacency_matrix(CL), IS$gTrues)
     
     # return results as vector
-    res <- c(SHD_ltest_val,SHD_mean_val,SHD_median_val,SHD_baseObs,SHD_baseAll)
+    res <- c(SHD_ltest_val,SHD_mean_val,SHD_median_val,SHD_baseObs,SHD_baseAll,
+             t_ltest, t_mean, t_median)
     return(res)
   })
   
@@ -216,14 +223,19 @@ explore_skeleton <- function(df_params, scoreFct = SHD_skeleton){
   df_median <- df_mean <- df_ltest <- df_baseObs <- df_baseAll <- df_params
   df_ltest$method <- "ltest"
   df_ltest$SHD <- vals[,1]
+  df_ltest$time_s <- vals[,6]
   df_mean$method <- "mean"
   df_mean$SHD <- vals[,2]
+  df_mean$time_s <- vals[,7]
   df_median$method <- "median"
   df_median$SHD <- vals[,3]
+  df_median$time_s <- vals[,8]
   df_baseObs$method = "baseObs"
   df_baseObs$SHD = vals[,4]
+  df_baseObs$time_s <- NaN
   df_baseAll$method = "baseAll"
   df_baseAll$SHD = vals[,5]
+  df_baseAll$time_s <- NaN
   df <- rbind(df_ltest,df_mean,df_median,df_baseObs,df_baseAll)
   
   return(prepare_df_plot(df))
@@ -309,7 +321,7 @@ explore <- function(
     
     
     # computations
-    res = array(NaN, length(methods_all) * length(pw_methods_all) * (4+length(scoreFct_all)))
+    res = array(NaN, dim=c(1,length(methods_all) * length(pw_methods_all) * (4+length(scoreFct_all))))
     i = 1
     for(m in methods_all){
       for(pw in pw_methods_all){
