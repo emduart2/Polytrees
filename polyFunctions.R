@@ -310,9 +310,11 @@ wmeanCorrels<-function(corrIs,nIs){
 #        1 observentional setting and (ndatasets-1) interventional settings are with interventionsize
 #        randomly chosen intervention nodes each are created
 #
-#        sdatasets= either c() or a vector of length ndatasets containing the sample sizes for each setting.
+#        sdatasets= can be c(), a number contained between 0 and 1 or a vector of length ndatasets containing the sample sizes for each setting.
 #        If sdatasets==c(), the first setting gets (totalsample%/%ndatasets+totalsample%%ndatasets) samples
 #        while the others get totalsample%/%ndatasets samples.
+#        If sdatasets==p, the first setting gets totalsample*p samples while the others get totalsample*(1-p)/(ndatasets-1) samples
+#        
 #
 #        totalSample = sum of the sample sizes of all interventional and obsv. experiments, to be specified
 #        only if sdatasets=c().
@@ -352,6 +354,12 @@ isetting<-function(p,ndatasets,interventionsize,sdatasets,totalsample,
     s<-sdatasets
     sdatasets<-0*c(1:ndatasets)+totalsample%/%ndatasets
     sdatasets[1]<-sdatasets[1]+totalsample%%ndatasets
+  }
+  if(length(sdatasets)==1){
+    s<-sdatasets
+    sdatasets<-0*c(1:ndatasets)
+    sdatasets[1]<-floor(s*totalsample)
+    sdatasets[2:ndatasets]<-ceiling((totalsample-sdatasets[1])/(ndatasets-1))
   }
   if(length(interventionsize)==1){
     s<-interventionsize
