@@ -143,9 +143,12 @@ chowLiu<-function(R){
 #                           sample size of the experiment I and I is the set
 #                           of intervened nodes.
 #       kindOfIntervention = String. Denotes the kind of intervention as in 
-#               Yang et al. 2018. Possible strings: "random"=random coefficient,
-#               "perfect"= coefficient set to 0, "imperfect"=coefficient set to 
-#               0 with probability 0.5, "inhibitory"=coefficient*0.1
+#               Yang et al. 2018. Possible strings: 
+#                 "random": random coefficient,
+#                 "perfect": coefficient set to 0, 
+#                 "imperfect": coefficient set to 0 with probability 0.5, 
+#                 "inhibitory": coefficient*0.1, 
+#                 "flipped": coefficient*(-1)
 #OUTPUT: A list with five sublist,
 #       Covs= This is a list of covariance matrices
 #              obtained from the interventional experiments.
@@ -192,10 +195,12 @@ interventionalData<-function(G,L,interventionTargets,kindOfIntervention="random"
               if(rbinom(1,1,0.5)==1) {
                 coeff <- 0
               } else {
-                coeff <- 0
+                coeff <- LI[k,tI[j]]
               }
             } else if(kindOfIntervention == "inhibitory"){
               coeff <- LI[k,tI[j]] * 0.1
+            } else if(kindOfIntervention == "flipped"){
+              coeff <- -LI[k,tI[j]]
             } else {
               stop("Invalid value of kindOfIntervention.")
             }
