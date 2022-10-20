@@ -2,7 +2,7 @@
 # figures of the paper. 
 # WARNING: The execution of this script takes long. It is recommended to not
 #   execute this script without utilizing multiple parallelized cores.
-save_dir = "data/"
+save_dir = "data_local_comp/"
 
 
 # ---- figure 1a (high-dim skeleton recovery) ----
@@ -20,9 +20,9 @@ df_params <- expand.grid(
   dag_nbh = 0
 )
 l <- explore_skeleton(df_params)
-saveRDS(l, file = paste(save_dir,"1a-01.Rds",sep=""))
+saveRDS(l, file = paste(save_dir,"1a_01.Rds",sep=""))
 
-# middle
+# middle``
 df_params <- expand.grid(
   tsize = c(500),
   totalSamples = c(500),
