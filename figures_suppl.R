@@ -4,6 +4,7 @@ library(RColorBrewer)
 library(scales)
 
 save_dir = "/home/lenny/Documents/Mathematische Statistik Lehrstuhl/fig_suppl"
+  # not used atm
 
 #---- helpful plot functions ----
 # dictionary for converting axis labels
@@ -195,7 +196,16 @@ colors_ort = c(
   "SHD rand." = "orange",
   "SHD opt." = "yellow"
 )
-
+colors_ort_ours = c(
+  "P.1, refined, BIC" = greens[1],
+  "P.1, refined, IRC" = greens[2],
+  "P.1, simple, BIC" = greens [3],
+  "P.1, simple, IRC" = greens[4],
+  "P.2, refined, BIC" = blues[1],
+  "P.2, refined, IRC" = blues[2],
+  "P.2, simple, BIC" = blues[3],
+  "P.2, simple, IRC" = blues[4]
+)
 
 
 # ---- fig2: skel, pooled data (LD) ----
@@ -250,6 +260,7 @@ fig1a_runtime
 
 
 # ---- fig4: ort, main analysis -----
+load("data_new/many_data (1).RData")
 l_nds = readRDS("data_new/Orientation/03-01.Rds") #ndatasets
 l_smpls = readRDS("data_new/Orientation/03-02.Rds"); # totalsamples
 l_intvS = readRDS("data_new/Orientation/03-03.Rds");  # intervSize
@@ -257,28 +268,27 @@ fig3 =
   pplot_ort(ld1$df[ld1$df$kindOfIntervention == "perfect",], "totalSamples","SHD") + 
     labs(title="(a) p=20, d=11, k=2") +  # low-dim base setting
   pplot_ort(l_smpls$df[l_smpls$df$kindOfIntervention == "perfect" & l_smpls$df$totalSamples != 2000,], "totalSamples","SHD") + 
-    labs(title="(b) p=500, d=21, k=10") +  # high-dim base setting
+    labs(title="(b) p=500, d=21, k=10") + ylab("") + # high-dim base setting
   
   pplot_ort(ld2$df[ld2$df$kindOfIntervention == "perfect",], "interventionSize","SHD") + 
   labs(title="(c) p=20, n=500, d=11") +
   pplot_ort(l_intvS$df[l_intvS$df$kindOfIntervention == "perfect" & (!(l_intvS$df$interventionSize %in% c(2,4))),], "interventionSize","SHD") + 
-  labs(title="(d) p=500, n=1000, d=21") +
+  labs(title="(d) p=500, n=1000, d=21") +ylab("") +
   
   pplot_ort(ld3$df[ld3$df$kindOfIntervention == "perfect",], "ndatasets","SHD") + 
   labs(title="(e) p=20, n=500, k=2") +
   pplot_ort(l_nds$df[l_nds$df$kindOfIntervention == "perfect",], "ndatasets","SHD") +
-  labs(title="(f) p=500, n=1000, k=10") +
+  labs(title="(f) p=500, n=1000, k=10") +ylab("") +
   
   pplot_ort(ld2$df[ld2$df$kindOfIntervention == "perfect",], "interventionSize","time_s") + 
   labs(title="(g) p=20, n=500, d=11") +
   pplot_ort(l_intvS$df[l_intvS$df$kindOfIntervention == "perfect" & (!(l_intvS$df$interventionSize %in% c(2,4))),], "interventionSize","time_s") + 
-  labs(title="(h) p=500, n=1000, d=21") +
+  labs(title="(h) p=500, n=1000, d=21") +ylab("") +
   
   plot_layout(ncol=2, guides = "collect") & theme(legend.position = "bottom", plot.title = element_text(face="bold"))
 fig3
 
-
-
+  
 
 # ---- fig5: skel, different intervention types ----
 # load and process data
@@ -375,26 +385,26 @@ fig_smpls = ggplot(smpl_plot, aes(totalSamples,SHD,fill=factor(method))) + geom_
   facet_grid(cols=ggplot2::vars(kindOfIntervention), labeller=labeller(.default = capitalize))+
   xlab(dict_axisLabs("totalSamples")) + labs(title=titles[1],fill="Method") +
   theme(legend.position = "bottom", plot.title = element_text(face="bold",hjust=0.5)) +
-  geom_hline(yintercept = smpl_rand, linetype = "dashed") +
-  scale_fill_manual(values = colors_ort) + 
+  geom_hline(yintercept = smpl_rand, linetype = "dotted") +
+  scale_fill_manual(values = colors_ort_ours) + 
   theme(strip.text.x = element_text(size = 13))
 fig_nds = ggplot(nds_plot, aes(ndatasets,SHD,fill=factor(method))) + geom_boxplot() +
   facet_grid(cols=ggplot2::vars(kindOfIntervention), labeller=labeller(.default = capitalize))+
   xlab(dict_axisLabs("ndatasets")) + labs(title=titles[2],fill="Method") +
   theme(legend.position = "bottom", plot.title = element_text(face="bold",hjust=0.5)) +
-  geom_hline(yintercept = nds_rand, linetype = "dashed") +
-  scale_fill_manual(values = colors_ort) + 
+  geom_hline(yintercept = nds_rand, linetype = "dotted") +
+  scale_fill_manual(values = colors_ort_ours) + 
   theme(strip.text.x = element_text(size = 13))
 fig_intvS = ggplot(intvS_plot, aes(interventionSize,SHD,fill=factor(method))) + geom_boxplot() +
   facet_grid(cols=ggplot2::vars(kindOfIntervention), labeller=labeller(.default = capitalize))+
   xlab(dict_axisLabs("interventionSize")) + labs(title=titles[3],fill="Method") +
   theme(legend.position = "bottom", plot.title = element_text(face="bold",hjust=0.5)) +
-  geom_hline(yintercept = intvS_rand, linetype = "dashed") +
-  scale_fill_manual(values = colors_ort) + 
+  geom_hline(yintercept = intvS_rand, linetype = "dotted") +
+  scale_fill_manual(values = colors_ort_ours) + 
   theme(strip.text.x = element_text(size = 13))
 fig_ort_intv = fig_smpls + fig_nds + fig_intvS + plot_layout(ncol=1,guides="collect") &
   theme(legend.position = "bottom")
-fig_ort_intv
+fig_ort_intv  # 900 by 1200
 
 
 
@@ -428,7 +438,7 @@ dfNbhs$method = factor(dfNbhs$method, levels=orderMethods)
 ggplot(dfNbhs, aes(factor(dag_nbh), SHD, fill=(method))) + geom_boxplot() +
   scale_fill_manual(values=colors_ort, breaks=orderMethods) + 
   labs(title="DAGs with p=500, n=1000, d=21, k=10", fill="Method") +
-  theme(plot.title = element_text(face="bold")) +
+  theme(plot.title = element_text(face="bold"), legend.position = "bottom") +
   xlab(dict_axisLabs("dag_nbh")) + coord_trans(y="log10")
 
 
