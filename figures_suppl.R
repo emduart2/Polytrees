@@ -3,10 +3,10 @@ library(patchwork)
 library(RColorBrewer)
 library(scales)
 
-save_dir = "/home/lenny/Documents/Mathematische Statistik Lehrstuhl/fig_suppl"
-  # not used atm
+data_folder = file.path("data","supplement")  
 
-#---- helpful plot functions ----
+
+#---- plot functions ----
 # dictionary for converting axis labels
 dict_axisLabs = function(x){
   val = switch(x,
@@ -21,8 +21,6 @@ dict_axisLabs = function(x){
   }
   return(val)
 }
-
-
 
 # function to make method names pretty
 pretty_names = function(df){
@@ -96,49 +94,7 @@ pretty_names = function(df){
   return(df)
 }
 
-# function to plot orientation plots with different interventions
-plot_orientations = function(l, x, y){
-  
-  # remove procedure 2 and extract mean of random
-  df = l$df
-  df = df[ !(df$proc %in% c("2","2simp")), ]
-  rand_SHD = mean(df[df$proc == "random", "SHD"])
-  df = df[ df$proc != "random", ]
-  df = pretty_names(df)
-  
-  # setup colors
-  reds = brewer.pal(n = 9, name = 'Reds')[c(3,4,7,8)]
-  greens = brewer.pal(n = 9, name = 'Greens')[c(3,4,7,8)]
-  blues = brewer.pal(n = 9, name = 'Blues')[c(3,4,7,8)]
-  pattern = c(4,3,2,1)
-  colors1 = c(greens[pattern], blues[pattern]) # colormap for orientations
-  
-  # plot
-  fig = ggplot(df, aes(df[,x], df[,y],fill=factor(method))) +
-    geom_boxplot() + xlab(x) + ylab(y) + labs(fill="Method",title=l$str) +
-    scale_fill_manual(values=colors1) +
-    geom_hline(yintercept = rand_SHD, linetype="dotted") +
-    facet_grid(cols = ggplot2::vars(kindOfIntervention),
-               labeller = labeller(.default = label_both))
-  return(fig)
-}
-
-# function for plotting skeleton in a nice way
-plot_skeleton = function(df, x, y){
-  
-  
-  
-  
-  fig = ggplot(df, aes(df[,x], df[,y],fill=factor(method))) +
-    geom_boxplot() + xlab(dict_axisLabs(x)) + ylab(dict_axisLabs(y)) + 
-    labs(fill="Aggr. fct.") +
-    facet_grid(cols = ggplot2::vars(kindOfIntervention),
-               labeller = labeller(.default = label_both))
-  return(fig)
-}
-
-
-# function that plots single orientation plot in pretty way
+# plots single orientation plot in pretty way
 pplot_ort = function(df, x, y){
   
   # remove procedure 2 and extract mean of random
@@ -166,14 +122,14 @@ pplot_ort = function(df, x, y){
 }
 
 # function to extract parameter value range
-unq = function(df){
+inspect = function(df){
   cols = c("tsize","totalSamples","interventionSize","ndatasets","kindOfIntervention","use_dags","dag_nbh","method")
   for(col in cols){
     print(paste(col,": ", paste(unique(df[,col]), collapse=",")))
   }
 }
 
-# color scheme for skeleton recovery
+# color schemes
 colors_skel = c(
   "baseObs" = hue_pal()(4)[1],
   "ltest" = hue_pal()(4)[2],
@@ -183,19 +139,6 @@ colors_skel = c(
 )
 greens = brewer.pal(n = 9, name = 'Greens')[c(8,7,4,3)]
 blues = brewer.pal(n = 9, name = 'Blues')[c(8,7,4,3)]
-colors_ort = c(
-  "P.1, refined, BIC" = greens[1],
-  "P.1, refined, IRC" = greens[2],
-  "P.1, simple, BIC" = greens [3],
-  "P.1, simple, IRC" = greens[4],
-  "P.2, refined, BIC" = blues[1],
-  "P.2, refined, IRC" = blues[2],
-  "P.2, simple, BIC" = blues[3],
-  "P.2, simple, IRC" = blues[4],
-  "GIES" = hue_pal()(3)[1],
-  "SHD rand." = "orange",
-  "SHD opt." = "yellow"
-)
 colors_ort_ours = c(
   "P.1, refined, BIC" = greens[1],
   "P.1, refined, IRC" = greens[2],
@@ -206,69 +149,24 @@ colors_ort_ours = c(
   "P.2, simple, BIC" = blues[3],
   "P.2, simple, IRC" = blues[4]
 )
+colors_ort = c(
+  colors_ort_ours,
+  "GIES" = hue_pal()(3)[1],
+  "SHD rand." = "orange",
+  "SHD opt." = "yellow"
+)
 
 
-# ---- fig2: skel, pooled data (LD) ----
-data_folder = "data/"
-df = readRDS(paste(data_folder, "supp_pooled.Rds",sep=""))$df
-df = df[df$interventionSize %in% c(1,6,10),]
-df = pretty_names(df)
-df$method = factor(df$method, levels = c("baseObs","ltest","mean","median","pooled"))
-
-capitalize <- function(string) {
-  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
-  string
-}
-fig_pooled = ggplot(df, aes(df[,x],SHD,fill=factor(method))) + geom_boxplot() +
-  facet_grid(cols=ggplot2::vars(kindOfIntervention), labeller=labeller(.default = capitalize))+
-  xlab(dict_axisLabs(x)) + labs(title="p=20, n=500, d=21",fill="Aggr. Fct.") +
-  theme(legend.position = "right", plot.title = element_text(face="bold",hjust=0.5)) +
-  scale_fill_manual(values = colors_skel) + 
-  theme(strip.text.x = element_text(size = 12))
-fig_pooled
-
-
-
-
-# ---- fig3: skel, runtime  ----
-data_folder = "data/"  # with final '/'
-y = "time_s"
-aggrFcts = c("ltest","mean","median")
-dfAll = rbind(hd_skel1, hd_skel2, hd_skel3)
-ylimits = c(min(dfAll[,y],na.rm=TRUE), max(dfAll[,y],na.rm=TRUE))
-hd_skel1 = readRDS(paste(data_folder, "1a_01_runtime.Rds",sep=""))
-hd_skel1 = hd_skel1$df[hd_skel1$df$method %in% aggrFcts, ]
-f1 = ggplot(hd_skel1, aes(totalSamples, hd_skel1[,y], fill=factor(method))) + geom_boxplot() + 
-  labs(fill="Aggr. fct.", title = "p=500, d=20, k=1") + 
-  xlab(dict_axisLabs("totalSamples")) + ylab(dict_axisLabs(y)) + ylim(ylimits) +
-  scale_fill_manual(values = colors_skel, breaks = aggrFcts)
-hd_skel2 = readRDS(paste(data_folder, "1a_02_runtime.Rds",sep=""))
-hd_skel2 = hd_skel2$df[hd_skel2$df$method %in% aggrFcts, ]
-f2 = ggplot(hd_skel2, aes(ndatasets, time_s, fill=factor(method))) + geom_boxplot() + 
-  labs(fill="Aggr. fct.", title = "p=500, n=500, k=1") + 
-  xlab(dict_axisLabs("ndatasets")) + ylab(dict_axisLabs(y))+ ylim(ylimits) +
-  scale_fill_manual(values = colors_skel, breaks = aggrFcts)
-hd_skel3 = readRDS(paste(data_folder, "1a_03_runtime.Rds",sep=""))
-hd_skel3 = hd_skel3$df[hd_skel3$df$method %in% aggrFcts, ]
-f3 = ggplot(hd_skel3, aes(interventionSize, time_s, fill=factor(method))) + geom_boxplot() + 
-  labs(fill="Aggr. fct.", title = "p=500, n=500, d=20") + 
-  xlab(dict_axisLabs("interventionSize")) + ylab(dict_axisLabs(y))+ ylim(ylimits)+
-  scale_fill_manual(values = colors_skel, breaks = aggrFcts)
-fig1a_runtime = f1 + f2 + f3 + plot_layout(nrow = 1, guides="collect") & 
-  theme(legend.position = "right", plot.title = element_text(face="bold"))
-fig1a_runtime
-
-
-# ---- fig4: ort, main analysis -----
-load("data_new/many_data (1).RData")
-l_nds = readRDS("data_new/Orientation/03-01.Rds") #ndatasets
-l_smpls = readRDS("data_new/Orientation/03-02.Rds"); # totalsamples
-l_intvS = readRDS("data_new/Orientation/03-03.Rds");  # intervSize
+# ---- fig2: ort, main analysis -----
+load(file.path(data_folder,"mainData.RData"))
+l_nds = readRDS(file.path(data_folder,"orientation/03-01.Rds")) #ndatasets
+l_smpls = readRDS(file.path(data_folder,"orientation/03-02.Rds")); # totalsamples
+l_intvS = readRDS(file.path(data_folder,"orientation/03-03.Rds"));  # intervSize
 fig3 = 
   pplot_ort(ld1$df[ld1$df$kindOfIntervention == "perfect",], "totalSamples","SHD") + 
-    labs(title="(a) p=20, d=11, k=2") +  # low-dim base setting
+  labs(title="(a) p=20, d=11, k=2") +  # low-dim base setting
   pplot_ort(l_smpls$df[l_smpls$df$kindOfIntervention == "perfect" & l_smpls$df$totalSamples != 2000,], "totalSamples","SHD") + 
-    labs(title="(b) p=500, d=21, k=10") + ylab("") + # high-dim base setting
+  labs(title="(b) p=500, d=21, k=10") + ylab("") + # high-dim base setting
   
   pplot_ort(ld2$df[ld2$df$kindOfIntervention == "perfect",], "interventionSize","SHD") + 
   labs(title="(c) p=20, n=500, d=11") +
@@ -288,14 +186,65 @@ fig3 =
   plot_layout(ncol=2, guides = "collect") & theme(legend.position = "bottom", plot.title = element_text(face="bold"))
 fig3
 
-  
+
+
+
+# ---- fig3: skel, pooled data (LD) ----
+df = readRDS(file.path(data_folder, "pooled.Rds"))$df
+df = df[df$interventionSize %in% c(1,6,10),]
+df = pretty_names(df)
+df$method = factor(df$method, levels = c("baseObs","ltest","mean","median","pooled"))
+
+capitalize <- function(string) {
+  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
+  string
+}
+fig_pooled = ggplot(df, aes(df[,x],SHD,fill=factor(method))) + geom_boxplot() +
+  facet_grid(cols=ggplot2::vars(kindOfIntervention), labeller=labeller(.default = capitalize))+
+  xlab(dict_axisLabs(x)) + labs(title="p=20, n=500, d=21",fill="Aggr. Fct.") +
+  theme(legend.position = "right", plot.title = element_text(face="bold",hjust=0.5)) +
+  scale_fill_manual(values = colors_skel) + 
+  theme(strip.text.x = element_text(size = 12))
+fig_pooled
+
+
+
+
+# ---- fig4: skel, runtime  ----
+y = "time_s"
+aggrFcts = c("ltest","mean","median")
+
+hd_skel1 = readRDS(file.path(data_folder, "1a_01_runtime.Rds"))
+hd_skel1 = hd_skel1$df[hd_skel1$df$method %in% aggrFcts, ]
+hd_skel2 = readRDS(file.path(data_folder, "1a_02_runtime.Rds"))
+hd_skel2 = hd_skel2$df[hd_skel2$df$method %in% aggrFcts, ]
+hd_skel3 = readRDS(file.path(data_folder, "1a_03_runtime.Rds"))
+hd_skel3 = hd_skel3$df[hd_skel3$df$method %in% aggrFcts, ]
+
+dfAll = rbind(hd_skel1, hd_skel2, hd_skel3)
+ylimits = c(min(dfAll[,y],na.rm=TRUE), max(dfAll[,y],na.rm=TRUE))
+f1 = ggplot(hd_skel1, aes(totalSamples, hd_skel1[,y], fill=factor(method))) + geom_boxplot() + 
+  labs(fill="Aggr. fct.", title = "p=500, d=20, k=1") + 
+  xlab(dict_axisLabs("totalSamples")) + ylab(dict_axisLabs(y)) + ylim(ylimits) +
+  scale_fill_manual(values = colors_skel, breaks = aggrFcts)
+f2 = ggplot(hd_skel2, aes(ndatasets, time_s, fill=factor(method))) + geom_boxplot() + 
+  labs(fill="Aggr. fct.", title = "p=500, n=500, k=1") + 
+  xlab(dict_axisLabs("ndatasets")) + ylab(dict_axisLabs(y))+ ylim(ylimits) +
+  scale_fill_manual(values = colors_skel, breaks = aggrFcts)
+f3 = ggplot(hd_skel3, aes(interventionSize, time_s, fill=factor(method))) + geom_boxplot() + 
+  labs(fill="Aggr. fct.", title = "p=500, n=500, d=20") + 
+  xlab(dict_axisLabs("interventionSize")) + ylab(dict_axisLabs(y))+ ylim(ylimits)+
+  scale_fill_manual(values = colors_skel, breaks = aggrFcts)
+fig1a_runtime = f1 + f2 + f3 + plot_layout(nrow = 1, guides="collect") & 
+  theme(legend.position = "right", plot.title = element_text(face="bold"))
+fig1a_runtime
+
 
 # ---- fig5: skel, different intervention types ----
 # load and process data
-data_folder = 'data/'
-nds_diff = readRDS("data_new/skeleton_recovery/skeleton_01.Rds")$df # ndatasets
-smpl_diff = readRDS("data_new/skeleton_recovery/skeleton_02.Rds")$df # totalsamples
-intvS_diff = readRDS("data_new/skeleton_recovery/skeleton_03.Rds")$df # intervSize
+nds_diff = readRDS(file.path(data_folder,"skeleton_recovery","skeleton_01.Rds"))$df # ndatasets
+smpl_diff = readRDS(file.path(data_folder,"skeleton_recovery","skeleton_02.Rds"))$df # totalsamples
+intvS_diff = readRDS(file.path(data_folder,"skeleton_recovery","skeleton_03.Rds"))$df # intervSize
 intvS_pfct = rbind(skeleton_03$df,skeleton_03_1$df,skeleton_03_2$df) # itnervSize perfect
 intvS_pfct = intvS_pfct[intvS_pfct$kindOfIntervention == "perfect",]
 smpl_pfct = rbind(skeleton_02$df,skeleton_02_1$df) # totalSamples perfect
@@ -351,16 +300,16 @@ fig_skel_intv
 
 # ---- fig6: ort, diff intervention types ----
 # load low-dim data
-titles = c("p=20, d=11, k=2","p=20, n=500, k=2", "p=20, n=500, d=11")
-ort_nds = readRDS("data_new/Orientation/ld_03-01.Rds")$df; unq(ld1) # nds
-ort_smpl = readRDS("data_new/Orientation/ld_03-02.Rds")$df; unq(ld2) # totalSmppl
-ort_interv = readRDS("data_new/Orientation/ld_03-03.Rds")$df; unq(ld3) # interv
+# titles = c("p=20, d=11, k=2","p=20, n=500, k=2", "p=20, n=500, d=11")
+# ort_nds = readRDS("data_new/orientation/ld_03-01.Rds")$df;  # nds
+# ort_smpl = readRDS("data_new/orientation/ld_03-02.Rds")$df;  # totalSmppl
+# ort_interv = readRDS("data_new/orientation/ld_03-03.Rds")$df; # interv
 
 # load high-dim data
 titles = c("p=500, d=21, k=10","p=500, n=1000, k=10", "p=500, n=1000, d=21")
-ort_nds = readRDS("data_new/Orientation/03-01.Rds")$df #ndatasets
-ort_smpl = readRDS("data_new/Orientation/03-02.Rds")$df # totalsamples
-ort_interv = readRDS("data_new/Orientation/03-03.Rds")$df  # intervSize
+ort_nds = readRDS(file.path(data_folder,"orientation","03-01.Rds"))$df #ndatasets
+ort_smpl = readRDS(file.path(data_folder,"orientation","03-02.Rds"))$df # totalsamples
+ort_interv = readRDS(file.path(data_folder,"orientation","03-03.Rds"))$df  # intervSize
 ort_smpl = ort_smpl[ort_smpl$totalSamples %in% c(500,1000,5000),]
 ort_interv = ort_interv[ort_interv$interventionSize %in% c(2,10,20),]
 
@@ -404,7 +353,7 @@ fig_intvS = ggplot(intvS_plot, aes(interventionSize,SHD,fill=factor(method))) + 
   theme(strip.text.x = element_text(size = 13))
 fig_ort_intv = fig_smpls + fig_nds + fig_intvS + plot_layout(ncol=1,guides="collect") &
   theme(legend.position = "bottom")
-fig_ort_intv  # 900 by 1200
+fig_ort_intv  # size: 900 by 1200
 
 
 
@@ -422,11 +371,11 @@ randomDag = function(dfAll, opt=FALSE){
   }
   return(df_randSHD)
 }
-l1 = readRDS("data_new/gies_comp/1-large_GIES_1.Rds")$df;  # pt, 
-l2 = readRDS("data_new/gies_comp/1-large_GIES_3.Rds")$df; # dags, nbh5, GIES
-l3 = readRDS("data_new/gies_comp/2-large_GIES_nb_1.Rds")$df;  # dags, nbh1, 
-l4 = readRDS("data_new/gies_comp/2-large_GIES_nb_10.Rds")$df;  # dags, nbh10
-l5 = readRDS("data_new/gies_comp/ours.Rds"); 
+l1 = readRDS(file.path(data_folder,"gies_comp","1-large_GIES_1.Rds"))$df  # pt, 
+l2 = readRDS(file.path(data_folder,"gies_comp","1-large_GIES_3.Rds"))$df # dags, nbh5, GIES
+l3 = readRDS(file.path(data_folder,"gies_comp","2-large_GIES_nb_1.Rds"))$df  # dags, nbh1, 
+l4 = readRDS(file.path(data_folder,"gies_comp","2-large_GIES_nb_10.Rds"))$df  # dags, nbh10
+l5 = readRDS(file.path(data_folder,"gies_comp","ours.Rds")) 
 ours = l5[[1]]$df
 ours = ours[ours$dag_nbh %in% c(1,5,10,20),]
 
@@ -448,7 +397,7 @@ ggplot(dfNbhs, aes(factor(dag_nbh), SHD, fill=(method))) + geom_boxplot() +
 
 
 # ---- fig8&9: unbalanced sample sizes ----
-load("data_new/unbalanced(2)/unbalanceddata.RData")
+load(file.path(data_folder,"unbalanced.RData"))
 
 # Skeleton
 skelplot = skeleton_04
@@ -478,6 +427,7 @@ p_o<-ggplot(orplot[orplot$method!="random" & orplot$kindOfIntervention == "perfe
 fig_unb_skel_ort = p_s + p_o + plot_layout(nrow=1) + 
   plot_annotation(title="p=500, n=1000, d=21, k=10", 
                   theme=theme(plot.title=element_text(face="bold",hjust=0.5)));  # 1000 by 500
+fig_unb_skel_ort
 
 # comparison to GIES
 sdaplot = sda
@@ -487,4 +437,4 @@ fig_unb_GIES <- ggplot(sdaplot,aes(sdatasets,SHD,fill=factor(method)))+geom_boxp
   ylab("SHD")+geom_hline(yintercept=m_dag, linetype="dotted")+
   theme(legend.position = "bottom", plot.title = element_text(face="bold",hjust=0.5))+
   scale_fill_manual(values = colors_ort, breaks=c("GIES","P.2, simple, IRC")) # 450 by 450
-
+fig_unb_GIES
