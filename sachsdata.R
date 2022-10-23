@@ -1,5 +1,5 @@
 # This script contains the code to generate Table 2 of the paper.
-
+source("setup.R")
 
 # Load Data
 library(readxl)

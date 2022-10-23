@@ -1,8 +1,10 @@
+source("setup.R")
+
 # This script contains the function calls to generate the data for the 
 # figures of the paper. 
-# WARNING: The execution of this script takes long. It is recommended to not
-#   execute this script without utilizing multiple parallelized cores.
-save_dir = "data_local_comp/"
+# WARNING: The execution of this script might take long. It is recommended to
+#   execute this script utilizing multiple parallelized cores (see README.md)
+save_dir = ""
 
 
 # ---- figure 1a (high-dim skeleton recovery) ----
@@ -76,8 +78,8 @@ l <- explore(
   df_params,
   scoreFct_all = list(pcalg::shd, true_positives, false_positives, true_negatives, false_negatives), 
   sFctNames_all = c("SHD","TP","FP","TN","FN"),
-  methods_all = list(c("mean","1simp"),c("mean","3simp"),c("GIES","GIES")),
-  pw_methods_all = c("TEST"))
+  methods_all = list(c("mean","1simp"),c("mean","2simp"),c("GIES","GIES")),
+  pw_methods_all = c("IRC"))
 saveRDS(l, file = paste(save_dir,"1b_ld_pt.Rds",sep=""))
 
 # low-dim dags
@@ -98,8 +100,8 @@ l <- explore(
   df_params,
   scoreFct_all = list(pcalg::shd, true_positives, false_positives, true_negatives, false_negatives), 
   sFctNames_all = c("SHD","TP","FP","TN","FN"),
-  methods_all = list(c("mean","1simp"),c("mean","3simp"),c("GIES","GIES")),
-  pw_methods_all = c("TEST"))
+  methods_all = list(c("mean","1simp"),c("mean","2simp"),c("GIES","GIES")),
+  pw_methods_all = c("IRC"))
 saveRDS(l, file = paste(save_dir,"1b_ld_dags.Rds",sep=""))
 
 
@@ -121,8 +123,8 @@ l <- explore(
   df_params,
   scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
   sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
-  methods_all = list(c("mean","1simp"),c("mean","3simp")),
-  pw_methods_all = c("TEST"))
+  methods_all = list(c("mean","1simp"),c("mean","2simp")),
+  pw_methods_all = c("IRC"))
 saveRDS(l, file = paste(save_dir,"1b_hd_pt.Rds",sep=''))
 df_params <- expand.grid(
   tsize = c(500),
@@ -142,7 +144,7 @@ l <- explore(
   scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives), 
   sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
   methods_all = list(c("GIES","GIES")),
-  pw_methods_all = c("TEST"))
+  pw_methods_all = c("IRC"))
 saveRDS(l, file = paste(save_dir,"1b_hd_pt_GIES.Rds",sep=''))
 
 
@@ -164,8 +166,8 @@ l <- explore(
   df_params,
   scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives),
   sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
-  methods_all = list(c("mean","1simp"),c("mean","3simp")),
-  pw_methods_all = c("TEST"))
+  methods_all = list(c("mean","1simp"),c("mean","2simp")),
+  pw_methods_all = c("IRC"))
 saveRDS(l, file = paste(save_dir,"1b_hd_dags.Rds",sep=''))
 df_params <- expand.grid(
   tsize = c(500),
@@ -185,5 +187,5 @@ l <- explore(
   scoreFct_all = list(pcalg::shd, SID, true_positives, false_positives, true_negatives, false_negatives),
   sFctNames_all = c("SHD","SID","TP","FP","TN","FN"),
   methods_all = list(c("GIES","GIES")),
-  pw_methods_all = c("TEST"))
+  pw_methods_all = c("IRC"))
 saveRDS(l, file = paste(save_dir,"1b_hd_dags_GIES.Rds",sep=''))

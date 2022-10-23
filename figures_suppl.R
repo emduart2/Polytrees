@@ -3,6 +3,12 @@ library(patchwork)
 library(RColorBrewer)
 library(scales)
 
+# DISCLAIMER
+# The data in the folder "data/" was generated with a different naming of the 
+#   methods; method 1 is the same, method 2 is an alternative method not analysed
+#   in the paper and method 3 is method 2 of the paper. This is only relevant
+#   for the naming in the data files, the code here parses all the data s.t. it has the
+#   naming corresponding to the paper (c.f. function "pretty_names" in this file).
 data_folder = file.path("data","supplement")  
 
 
@@ -22,7 +28,7 @@ dict_axisLabs = function(x){
   return(val)
 }
 
-# function to make method names pretty
+# function to make method names pretty and corresponding to naming in the paper
 pretty_names = function(df){
   dict_method = function(x){return(switch(x,
      "gtruth,1,BIC" = "P.1, refined, BIC",
@@ -162,7 +168,7 @@ load(file.path(data_folder,"mainData.RData"))
 l_nds = readRDS(file.path(data_folder,"orientation/03-01.Rds")) #ndatasets
 l_smpls = readRDS(file.path(data_folder,"orientation/03-02.Rds")); # totalsamples
 l_intvS = readRDS(file.path(data_folder,"orientation/03-03.Rds"));  # intervSize
-fig3 = 
+fig2 = 
   pplot_ort(ld1$df[ld1$df$kindOfIntervention == "perfect",], "totalSamples","SHD") + 
   labs(title="(a) p=20, d=11, k=2") +  # low-dim base setting
   pplot_ort(l_smpls$df[l_smpls$df$kindOfIntervention == "perfect" & l_smpls$df$totalSamples != 2000,], "totalSamples","SHD") + 
@@ -184,7 +190,7 @@ fig3 =
   labs(title="(h) p=500, n=1000, d=21") +ylab("") +
   
   plot_layout(ncol=2, guides = "collect") & theme(legend.position = "bottom", plot.title = element_text(face="bold"))
-fig3
+fig2
 
 
 

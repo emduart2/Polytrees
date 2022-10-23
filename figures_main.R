@@ -1,43 +1,30 @@
 # This file contains the code to generate the figures from the paper given
 # the data from the computation script in the data_folder.
 
-library(RColorBrewer)
-library(patchwork)
-library(scales)
 library(ggplot2)
+library(patchwork)
+library(RColorBrewer)
+library(scales)
 
-data_folder = "data/"  # with final '/'
+# DISCLAIMER
+# The data in the folder "data/" was generated with a different naming of the 
+#   methods; method 1 is the same, method 2 is an alternative method not analysed
+#   in the paper and method 3 is method 2 of the paper. This is only relevant
+#   for the naming in the data files, the code here parses all the data s.t. it has the
+#   naming corresponding to the paper (c.f. function "dict" in this file).
+data_folder = file.path("data")
 
 
 #---- useful plot functions ----
-create_randDag = function(dfAll){
-  df_randSHD = dfAll[dfAll$method == dfAll$method[1],] # select all entries from one method to get all simulated graphs exactly once
-  df_randSHD$method = "shd_rand"
-  df_randSHD$SHD = df_randSHD$shd_rand
-  return(df_randSHD)
-}
 dict = function(x){return(switch(x,
-   "gtruth,1,BIC" = "P.1, refined, BIC",
-   "gtruth,1,TEST" = "P.1, refined, IRC",
-   "gtruth,1simp,BIC" = "P.1, simple, BIC",
-   "gtruth,1simp,TEST" = "P.1, simple, IRC",
-   "gtruth,2,BIC" = "P.2, refined, BIC",
-   "gtruth,2,TEST" = "P.2, refined, IRC",
-   "gtruth,2simp,BIC" = "P.2, simple, BIC",
-   "gtruth,2simp,TEST" = "P.2, simple, IRC",
-   "gtruth,3,BIC" = "P.2, refined, BIC",
-   "gtruth,3,TEST" = "P.2, refined, IRC",
-   "gtruth,3simp,BIC" = "P.2, simple, BIC",
-   "gtruth,3simp,TEST" = "P.1, simple, IRC",
-   
    "mean,1,BIC" = "P.1, refined, BIC",
    "mean,1,TEST" = "P.1, refined, IRC",
    "mean,1simp,BIC" = "P.1, simple, BIC",
    "mean,1simp,TEST" = "P.1, simple, IRC",
-   "mean,2,BIC" = "P.2, refined, BIC",
-   "mean,2,TEST" = "P.2, refined, IRC",
-   "mean,2simp,BIC" = "P.2, simple, BIC",
-   "mean,2simp,TEST" = "P.2, simple, IRC",
+   "mean,2,BIC" = "alt., refined, BIC",
+   "mean,2,TEST" = "alt., refined, IRC",
+   "mean,2simp,BIC" = "alt., simple, BIC",
+   "mean,2simp,TEST" = "alt., simple, IRC",
    "mean,3,BIC" = "P.2, refined, BIC",
    "mean,3,TEST" = "P.2, refined, IRC",
    "mean,3simp,BIC" = "P.2, simple, BIC",
@@ -48,17 +35,16 @@ dict = function(x){return(switch(x,
 
 
 
-
 # ---- figure 1a (high-dim skeleton recovery) ----
-hd_skel1 = readRDS(paste(data_folder, "1a_01.Rds",sep=""))
+hd_skel1 = readRDS(file.path(data_folder, "1a_01.Rds"))
 hd_skel1 = hd_skel1$df[hd_skel1$df$method %in% c("mean","median","ltest","baseObs"), ]
 f1 = ggplot(hd_skel1, aes(totalSamples, SHD, fill=factor(method))) + geom_boxplot() + 
   labs(fill="Aggr. fct.") + xlab("number of samples")
-hd_skel2 = readRDS(paste(data_folder, "1a_02.Rds",sep=""))
+hd_skel2 = readRDS(file.path(data_folder, "1a_02.Rds"))
 hd_skel2 = hd_skel2$df[hd_skel2$df$method %in% c("mean","median","ltest","baseObs"), ]
 f2 = ggplot(hd_skel2, aes(ndatasets, SHD, fill=factor(method))) + geom_boxplot() + 
   labs(fill="Aggr. fct.") + xlab("number of interv. datasets")
-hd_skel3 = readRDS(paste(data_folder, "1a_03.Rds",sep=""))
+hd_skel3 = readRDS(file.path(data_folder, "1a_03.Rds"))
 hd_skel3 = hd_skel3$df[hd_skel3$df$method %in% c("mean","median","ltest","baseObs"), ]
 f3 = ggplot(hd_skel3, aes(interventionSize, SHD, fill=factor(method))) + geom_boxplot() + 
   labs(fill="Aggr. fct.") + xlab("size of interventions")
@@ -71,7 +57,7 @@ fig1a
 legend_str = "Method"
 
 # low-dim polytree
-dfplotPT = readRDS(paste(data_folder, "1b_ld_pt.Rds",sep=""))$df
+dfplotPT = readRDS(file.path(data_folder, "1b_ld_pt.Rds"))$df
 rand_shd_mean_ldpt = mean(dfplotPT[dfplotPT$method == dfplotPT$method[1], "shd_rand"])
 dfplotPT$method = sapply(dfplotPT$method, dict, USE.NAMES = FALSE)
 f_ld_PT = ggplot(dfplotPT, aes(totalSamples, SHD, fill=factor(method))) +
@@ -80,7 +66,7 @@ f_ld_PT = ggplot(dfplotPT, aes(totalSamples, SHD, fill=factor(method))) +
   theme(plot.title = element_text(face="bold"))
 
 # low-dim DAGs
-dfplotDAG = readRDS(paste(data_folder, "1b_ld_dags.Rds",sep=""))$df
+dfplotDAG = readRDS(file.path(data_folder, "1b_ld_dags.Rds"))$df
 rand_shd_mean_lddags = mean(dfplotDAG[dfplotDAG$method == dfplotDAG$method[1], "shd_rand"])
 dfplotDAG$method = sapply(dfplotDAG$method, dict, USE.NAMES = FALSE)
 f_ld_dags = ggplot(dfplotDAG, aes(totalSamples, SHD, fill=factor(method))) +
@@ -89,8 +75,8 @@ f_ld_dags = ggplot(dfplotDAG, aes(totalSamples, SHD, fill=factor(method))) +
   theme(plot.title = element_text(face="bold"))
 
 # high-dim polytree
-l03 = readRDS(paste(data_folder, "1b_hd_pt.Rds",sep=""))
-l03_GIES = readRDS(paste(data_folder, "1b_hd_pt_GIES.Rds",sep=""))
+l03 = readRDS(file.path(data_folder, "1b_hd_pt.Rds"))
+l03_GIES = readRDS(file.path(data_folder, "1b_hd_pt_GIES.Rds"))
 df03_all = rbind(l03$df, l03_GIES$df)
 df03_all = df03_all[df03_all$interventionSize == 10, ]
 rand_shd_mean2 = mean(df03_all[df03_all$method == df03_all$method[1], "shd_rand"])
@@ -102,8 +88,8 @@ f_hd_PT = ggplot(df03_all, aes(totalSamples, SHD, fill=factor(method))) + geom_b
   coord_trans(y="log10")
 
 # high-dim dags
-l7 = readRDS(paste(data_folder,"1b_hd_dags.Rds",sep=''))
-l7_GIES = readRDS(paste(data_folder,"1b_hd_dags_GIES.Rds",sep=''))
+l7 = readRDS(file.path(data_folder,"1b_hd_dags.Rds"))
+l7_GIES = readRDS(file.path(data_folder,"1b_hd_dags_GIES.Rds"))
 nbh5 = rbind(l7$df, l7_GIES$df)
 nbh5plot = nbh5[nbh5$totalSamples != "3000", ]
 rand_shd_mean = mean(nbh5plot[nbh5plot$method == nbh5plot$method[1], "shd_rand"])
@@ -147,3 +133,4 @@ runtime_pt_mean
 runtime_pt_max
 runtime_dags_mean
 runtime_dags_max
+
