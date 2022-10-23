@@ -34,7 +34,7 @@ df_params <- expand.grid(
   ndatasets = c(3),
   k = c(1:3),
   sdatasets = list(c()),
-  kindOfIntervention = c("perfekt"),
+  kindOfIntervention = c("perfect"),
   ensureDiff = TRUE,
   alpha = c(0.05),
   use_dags = FALSE,
@@ -44,7 +44,7 @@ l2 = explore(
   df_params,
   scoreFct_all = list(pcalg::shd,SID), 
   sFctNames_all = c("SHD","SID"),
-  methods_all = list(c("mean","1"),c("mean","3simp"),c("gtruth","3simp")),
+  methods_all = list(c("mean","1"),c("mean","2simp"),c("gtruth","2simp")),
   pw_methods_all = c("BIC","IRC"))
 ggplot(l2$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot()+
   ggplot(l2$df, aes(totalSamples,SID,fill=factor(method))) + geom_boxplot()+
@@ -60,7 +60,7 @@ df_params <- expand.grid(
   ndatasets = c(3),
   k = c(1:3),
   sdatasets = list(c()),
-  kindOfIntervention = c("perfekt"),
+  kindOfIntervention = c("perfect"),
   ensureDiff = TRUE,
   alpha = c(0.05),
   use_dags = FALSE,
@@ -70,7 +70,7 @@ l3 = explore(
   df_params,
   scoreFct_all = list(pcalg::shd, SID), 
   sFctNames_all = c("SHD","SID"),
-  methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","3simp")),
+  methods_all = list(c("GIES","GIES"),c("mean","1"),c("mean","2simp")),
   pw_methods_all = c("IRC"))
 ggplot(l3$df, aes(totalSamples,SHD,fill=factor(method))) + geom_boxplot()+
   ggplot(l3$df, aes(totalSamples,SID,fill=factor(method))) + geom_boxplot()+

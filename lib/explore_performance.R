@@ -41,13 +41,13 @@ estimate_skeleton <- function(Rs, Ns, method="mean"){
 #   Xlist:    List of samples with same length as Ilist. Each entry is n-by-p where
 #             n is the number of samples
 #   procedure:String to denote which procedure to take. One of 
-#             "1","1simp","2","2simp","3","3simp". Default: "3simp"
+#             "1","1simp","2","2simp","alt","altsimp","random". Default: "2simp"
 #   pw_method:String. Pairwise method to use. One of "BIC","IRC". Default: "IRC"
 #
 # Outpus:
 #   graphNEL: i_cpdag_graph with the estimated orientations
 estimate_orientations <- function(
-    p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,procedure="3simp",pw_method="BIC"){
+    p,Covlist,Ilist,Nlist,E,lC,thres,alpha,Xlist,procedure="2simp",pw_method="IRC"){
   
   # parse pw_method for internal naming
   if(pw_method == "IRC"){
@@ -74,24 +74,6 @@ estimate_orientations <- function(
   
   # procedure 2 simple
   if(procedure == "2simp"){
-    dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E,p,method="simple",
-                                   pw_method=pw_method,alpha,Xlist)
-    dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
-    i_cpdag_graph<-dag2essgraph(as_graphnel(graph_from_adjacency_matrix(dag_adj)),Ilist)
-    return(i_cpdag_graph)
-  } 
-  
-  # procedure 2
-  if(procedure == "2"){
-    dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E,p,method="nothing",
-                                   pw_method=pw_method,alpha,Xlist)
-    dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
-    i_cpdag_graph<-dag2essgraph(as_graphnel(graph_from_adjacency_matrix(dag_adj)),Ilist)
-    return(i_cpdag_graph)
-  }
-  
-  # procedure 3 simple
-  if(procedure == "3simp"){
     dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E,p,method="simple"
                              ,pw_method=pw_method,alpha,Xlist)
     dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
@@ -99,8 +81,8 @@ estimate_orientations <- function(
     return(i_cpdag_graph)
   } 
   
-  # procedure 3
-  if(procedure == "3"){
+  # procedure 2
+  if(procedure == "2"){
     dag_list<-dir_i_or_first(Covlist,Ilist,Nlist,lC,thres,E,p,method="nothing"
                              ,pw_method=pw_method,alpha,Xlist)
     dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
@@ -116,6 +98,24 @@ estimate_orientations <- function(
       }
     }
     dag_adj<-cpdag_from_lists(E,c(),p)
+    i_cpdag_graph<-dag2essgraph(as_graphnel(graph_from_adjacency_matrix(dag_adj)),Ilist)
+    return(i_cpdag_graph)
+  }
+  
+  # alternative procedure simple
+  if(procedure == "altsimp"){
+    dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E,p,method="simple",
+                                   pw_method=pw_method,alpha,Xlist)
+    dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
+    i_cpdag_graph<-dag2essgraph(as_graphnel(graph_from_adjacency_matrix(dag_adj)),Ilist)
+    return(i_cpdag_graph)
+  } 
+  
+  # alternative procedure
+  if(procedure == "alt"){
+    dag_list<-complete_alternating(Covlist,Ilist,Nlist,lC,thres,E,p,method="nothing",
+                                   pw_method=pw_method,alpha,Xlist)
+    dag_adj<-cpdag_from_lists(dag_list$oriented,dag_list$unoriented,p)
     i_cpdag_graph<-dag2essgraph(as_graphnel(graph_from_adjacency_matrix(dag_adj)),Ilist)
     return(i_cpdag_graph)
   }
